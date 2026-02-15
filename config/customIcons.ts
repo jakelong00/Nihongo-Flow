@@ -14,6 +14,7 @@ export const CUSTOM_ICON_PATHS: Record<string, string> = {
   navKanji: "", // Location: Sidebar 'Kanji' link. Guideline: 24x24px.
   navGrammar: "", // Location: Sidebar 'Grammar' link. Guideline: 24x24px.
   navSettings: "", // Location: Sidebar 'Settings' link. Guideline: 24x24px.
+  navAbout: "", // Location: Sidebar 'About' link. Guideline: 24x24px.
 
   // === HOME PAGE ===
   homeFolderSelect: "", // Location: Large icon in 'Select Folder' card. Guideline: 64x64px.

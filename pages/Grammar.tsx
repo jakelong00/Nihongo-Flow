@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { Plus, AlertCircle, Search, Trash2, Edit2, Check, CheckSquare, Square, X, MinusCircle, RotateCcw, Filter, ArrowUpDown } from 'lucide-react';
@@ -8,7 +9,7 @@ import { ThemedIcon } from '../components/ThemedIcon';
 import clsx from 'clsx';
 
 const Grammar: React.FC = () => {
-  const { grammarData, addGrammar, updateGrammar, deleteGrammar, getLearningStage, getMasteryPercentage, logReview } = useFileSystem();
+  const { grammarData, addGrammar, updateGrammar, deleteGrammar, getLearningStage, getMasteryPercentage, logReview, resetItemStats } = useFileSystem();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +86,9 @@ const Grammar: React.FC = () => {
 
   const handleResetProgress = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    await logReview(DataType.GRAMMAR, id, ReviewResult.FORGOT);
+    if (window.confirm("Are you sure you want to reset all progress for this grammar rule? It will return to 'New' status.")) {
+      await resetItemStats(DataType.GRAMMAR, id);
+    }
   };
 
   const toggleSelection = (e: React.MouseEvent, id: string) => {

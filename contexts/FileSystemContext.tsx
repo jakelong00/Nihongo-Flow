@@ -30,64 +30,36 @@ const FILE_NAMES = {
 
 const SAMPLE_VOCAB: VocabItem[] = [
   { id: '1', word: '猫', reading: 'ねこ', meaning: 'Cat', partOfSpeech: 'Noun', jlpt: 'N5', chapter: '1' },
-  { 
-      id: '2', 
-      word: '食べる', 
-      reading: 'たべる', 
-      meaning: 'To eat', 
-      partOfSpeech: 'Ichidan Verb', 
-      jlpt: 'N5', 
-      chapter: '2',
-      te: '食べて',
-      nai: '食べない',
-      masu: '食べます',
-      ta: '食べた',
-      potential: '食べられる',
-      volitional: '食べよう',
-      passive: '食べられる',
-      causative: '食べさせる'
-  },
-  { id: '3', word: '図書館', reading: 'としょかん', meaning: 'Library', partOfSpeech: 'Noun', jlpt: 'N4', chapter: '5' },
-  { 
-      id: '4', 
-      word: '行く', 
-      reading: 'いく', 
-      meaning: 'To go', 
-      partOfSpeech: 'Godan Verb', 
-      jlpt: 'N5', 
-      chapter: '1',
-      te: '行って',
-      nai: '行かない',
-      masu: '行きます',
-      ta: '行った',
-      potential: '行ける',
-      volitional: '行こう',
-      passive: '行かれる',
-      causative: '行かせる'
-  }
+  { id: '2', word: '食べる', reading: 'たべる', meaning: 'To eat', partOfSpeech: 'Ichidan Verb', jlpt: 'N5', chapter: '2', te: '食べなくて', nai: '食べない', masu: '食べます', ta: '食べた', potential: '食べられる', volitional: '食べよう', passive: '食べられる', causative: '食べさせる' },
+  { id: '3', word: '速い', reading: 'はやい', meaning: 'Fast', partOfSpeech: 'I-Adjective', jlpt: 'N5', chapter: '3' },
+  { id: '4', word: '綺麗', reading: 'きれい', meaning: 'Beautiful / Clean', partOfSpeech: 'Na-Adjective', jlpt: 'N5', chapter: '4' },
+  { id: '5', word: '昨日', reading: 'きのう', meaning: 'Yesterday', partOfSpeech: 'Noun', jlpt: 'N5', chapter: '1' },
+  { id: '6', word: '読む', reading: 'よむ', meaning: 'To read', partOfSpeech: 'Godan Verb', jlpt: 'N5', chapter: '5', te: '読んで', nai: '読まない', masu: '読みます', ta: '読んだ', potential: '読める', volitional: '読もう', passive: '読まれる', causative: '読ませる' },
+  { id: '7', word: '全然', reading: 'ぜんぜん', meaning: 'Not at all', partOfSpeech: 'Adverb', jlpt: 'N4', chapter: '10' }
 ];
 
 const SAMPLE_KANJI: KanjiItem[] = [
   { id: '1', character: '日', onyomi: 'ニチ, ジツ', kunyomi: 'ひ, -び', meaning: 'Day, Sun', jlpt: 'N5', strokes: '4', chapter: '1' },
   { id: '2', character: '本', onyomi: 'ホン', kunyomi: 'もと', meaning: 'Book, Origin', jlpt: 'N5', strokes: '5', chapter: '1' },
+  { id: '3', character: '月', onyomi: 'ゲツ, ガツ', kunyomi: 'つき', meaning: 'Moon, Month', jlpt: 'N5', strokes: '4', chapter: '2' },
+  { id: '4', character: '火', onyomi: 'カ', kunyomi: 'ひ', meaning: 'Fire', jlpt: 'N5', strokes: '4', chapter: '2' },
+  { id: '5', character: '水', onyomi: 'スイ', kunyomi: 'みず', meaning: 'Water', jlpt: 'N5', strokes: '4', chapter: '2' }
 ];
 
 const SAMPLE_GRAMMAR: GrammarItem[] = [
   { id: '1', rule: '〜は〜です', explanation: 'Topic marker (wa) and Copula (desu). Indicates X is Y.', examples: ['私は学生です。', 'これはペンです。'], jlpt: 'N5', chapter: '1' },
+  { id: '2', rule: '〜てください', explanation: 'Used to make a polite request.', examples: ['座ってください。', '食べてください。'], jlpt: 'N5', chapter: '3' }
 ];
 
 const STORAGE_PREFIX = 'nihongo_flow_';
 
 const generateNextId = (items: { id: string }[]): string => {
     if (items.length === 0) return "1";
-    const maxId = items.reduce((max, item) => {
-        const num = parseInt(item.id, 10);
-        return !isNaN(num) && num > max ? num : max;
-    }, 0);
-    return (maxId + 1).toString();
+    const maxIds = items.map(item => parseInt(item.id, 10)).filter(n => !isNaN(n));
+    if (maxIds.length === 0) return (items.length + 1).toString();
+    return (Math.max(...maxIds) + 1).toString();
 };
 
-// Fixed FileProvider: Added missing return statement and implemented all required context methods.
 export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [isLocalMode, setIsLocalMode] = useState(false);
@@ -117,7 +89,6 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return data as T[];
   }, []);
 
-  // Fixed readFileData: Added return value to satisfy the Promise<T[]> type signature (resolves line 126 error).
   const readFileData = useCallback(async <T,>(fileName: string, dataType: DataType, handle?: FileSystemFileHandle): Promise<T[]> => {
     let text = '';
     if (handle) {
@@ -137,10 +108,14 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fileName = FILE_NAMES[dataType];
     
     if (dirHandle) {
-      const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
-      const writable = await fileHandle.createWritable();
-      await writable.write(csvContent);
-      await writable.close();
+      try {
+        const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(csvContent);
+        await writable.close();
+      } catch (e) {
+        console.error("Failed to write to file system", e);
+      }
     } else if (isLocalMode) {
       localStorage.setItem(`${STORAGE_PREFIX}${fileName}`, csvContent);
     }
@@ -269,20 +244,27 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await writeFileData(DataType.STATS, newData);
   };
 
-  const getLearningStage = (category: DataType, itemId: string): LearningStage => {
+  // Memoize helpers to ensure consumers react to statsData changes
+  const getLearningStage = useCallback((category: DataType, itemId: string): LearningStage => {
     const itemStats = statsData.filter(s => s.category === category && s.itemId === itemId);
     if (itemStats.length === 0) return LearningStage.NEW;
     const lastResult = itemStats[itemStats.length - 1].result;
     if (lastResult === ReviewResult.MASTERED) return LearningStage.MASTERED;
     return LearningStage.LEARNING;
-  };
+  }, [statsData]);
 
-  const getMasteryPercentage = (category: DataType, itemId: string): number => {
+  const getMasteryPercentage = useCallback((category: DataType, itemId: string): number => {
     const itemStats = statsData.filter(s => s.category === category && s.itemId === itemId);
     if (itemStats.length === 0) return 0;
+    
+    // Most recent status check
+    const lastResult = itemStats[itemStats.length - 1].result;
+    if (lastResult === ReviewResult.MASTERED) return 100;
+    
+    // Calculation for non-mastered
     const easyCount = itemStats.filter(s => s.result === ReviewResult.EASY || s.result === ReviewResult.MASTERED).length;
     return Math.min(100, easyCount * 25);
-  };
+  }, [statsData]);
 
   const resetDirectory = () => {
     setDirHandle(null);
@@ -322,11 +304,9 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetDirectory
   };
 
-  // Fixed FileProvider: Added return statement to satisfy React component return requirements (resolves line 97 error).
   return <FileContext.Provider value={value}>{children}</FileContext.Provider>;
 };
 
-// Fixed: Exported useFileSystem hook to resolve import errors in other files.
 export const useFileSystem = () => {
   const context = useContext(FileContext);
   if (context === undefined) {

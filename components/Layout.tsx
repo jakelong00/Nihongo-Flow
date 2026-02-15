@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, FolderOpen, GraduationCap, LayoutDashboard, Settings, Languages, BrainCircuit, Database, Leaf, Menu, X } from 'lucide-react';
+import { BookOpen, FolderOpen, GraduationCap, LayoutDashboard, Settings, Languages, BrainCircuit, Database, Leaf, Menu, X, HelpCircle } from 'lucide-react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { STRINGS } from '../constants/strings';
 import { ThemedIcon } from './ThemedIcon';
@@ -31,6 +32,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { name: 'Vocabulary', path: '/vocab', icon: BookOpen, key: 'navVocab' },
     { name: 'Kanji', path: '/kanji', icon: Languages, key: 'navKanji' },
     { name: 'Grammar', path: '/grammar', icon: GraduationCap, key: 'navGrammar' },
+    { name: 'About', path: '/about', icon: HelpCircle, key: 'navAbout' },
     { name: 'Settings', path: '/settings', icon: Settings, key: 'navSettings' },
   ];
 

@@ -1,3 +1,4 @@
+
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { FileProvider } from './contexts/FileSystemContext';
 import Layout from './components/Layout';
@@ -8,6 +9,7 @@ import Kanji from './pages/Kanji';
 import Grammar from './pages/Grammar';
 import Review from './pages/Review';
 import Settings from './pages/Settings';
+import About from './pages/About';
 
 function App() {
   return (
@@ -23,6 +25,7 @@ function App() {
             <Route path="/kanji" element={<Kanji />} />
             <Route path="/grammar" element={<Grammar />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/about" element={<About />} />
           </Routes>
         </Layout>
       </Router>

@@ -32,8 +32,11 @@ const VERB_FORMS = [
   { key: 'causative', label: 'Causative' }
 ];
 
+// Consistent grid layout for headers and rows
+const GRID_COLS = "grid-cols-[48px_1.2fr_0.8fr_1.5fr_1.2fr_1fr]";
+
 const Vocab: React.FC = () => {
-  const { vocabData, addVocab, updateVocab, deleteVocab, getLearningStage, getMasteryPercentage, logReview } = useFileSystem();
+  const { vocabData, addVocab, updateVocab, deleteVocab, getLearningStage, getMasteryPercentage, logReview, resetItemStats } = useFileSystem();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingItem, setViewingItem] = useState<VocabItem | null>(null);
@@ -134,8 +137,8 @@ const Vocab: React.FC = () => {
 
   const handleResetProgress = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (window.confirm("Reset learning progress for this word?")) {
-        await logReview(DataType.VOCAB, id, ReviewResult.FORGOT);
+    if (window.confirm("Are you sure you want to reset all progress for this item? It will return to 'New' status and 0% mastery.")) {
+        await resetItemStats(DataType.VOCAB, id);
     }
   };
 
@@ -359,13 +362,13 @@ const Vocab: React.FC = () => {
       </div>
 
       {/* List Header (Desktop only) */}
-      <div className="hidden md:grid grid-cols-[48px_1fr_1fr_1.5fr_1fr_1.5fr] gap-4 px-5 py-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-          <div></div>
+      <div className={clsx("hidden md:grid gap-4 px-5 py-2 text-[10px] font-black text-gray-400 uppercase tracking-widest", GRID_COLS)}>
+          <div className="flex justify-center">Select</div>
           <div>Word / Reading</div>
           <div>Part of Speech</div>
           <div>Meaning</div>
-          <div>Status</div>
-          <div className="text-right">Actions</div>
+          <div className="text-center">Status</div>
+          <div className="text-right pr-4">Actions</div>
       </div>
 
       {/* Detail Drawer Modal */}
@@ -471,7 +474,7 @@ const Vocab: React.FC = () => {
                         )}
                      >
                         {/* Grid container: Mobile is flex, Desktop is grid */}
-                        <div className="p-4 md:p-0 md:h-16 flex flex-col md:grid md:grid-cols-[48px_1fr_1fr_1.5fr_1fr_1.5fr] md:items-center md:gap-4">
+                        <div className={clsx("p-4 md:p-0 md:h-16 flex flex-col md:grid md:items-center md:gap-4", GRID_COLS)}>
                             
                             {/* Checkbox (MD: First Column) */}
                             <div className="hidden md:flex justify-center items-center h-full border-r border-gray-50">
@@ -499,7 +502,7 @@ const Vocab: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Part of Speech (Now aligned in list) */}
+                            {/* Part of Speech */}
                             <div className="mt-2 md:mt-0">
                                 <span className={clsx(
                                     "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border",
@@ -509,28 +512,27 @@ const Vocab: React.FC = () => {
                                 </span>
                             </div>
 
-                            {/* Meaning (Aligned) */}
+                            {/* Meaning */}
                             <div className="mt-1 md:mt-0 md:px-2">
                                 <p className="text-sm font-bold text-gray-800 line-clamp-1">{item.meaning}</p>
                             </div>
 
-                            {/* Level / Status */}
-                            <div className="mt-3 md:mt-0 flex items-center gap-2">
-                                <div className="hidden lg:flex gap-1 mr-2">
+                            {/* Status */}
+                            <div className="mt-3 md:mt-0 flex items-center justify-center gap-2">
+                                <div className="hidden lg:flex gap-1 mr-1">
                                     <span className="px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded text-[9px] font-black border border-gray-100">{item.jlpt}</span>
                                 </div>
                                 <div className={clsx(
-                                    "px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                                    "px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border whitespace-nowrap",
                                     getStatusColor(item.id)
                                 )}>
                                     {stage}
                                 </div>
                             </div>
 
-                            {/* Actions (MD: End Column) */}
-                            <div className="mt-4 md:mt-0 flex justify-end gap-1 md:px-5">
+                            {/* Actions */}
+                            <div className="mt-4 md:mt-0 flex justify-end gap-1 md:pr-4">
                                 <div className="flex gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {/* Progress Action Button (Toggle based on Stage) */}
                                     {stage === LearningStage.MASTERED ? (
                                         <button 
                                             onClick={(e) => { e.stopPropagation(); handleResetProgress(e, item.id); }} 
