@@ -11,6 +11,8 @@ export interface VocabItem {
   word: string;
   reading: string;
   meaning: string;
+  partOfSpeech: string;
+  conjugations?: Record<string, string>; // e.g. { te: '...', nai: '...' }
   jlpt: string;
   chapter: string;
 }

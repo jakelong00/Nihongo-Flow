@@ -438,7 +438,7 @@ const Review: React.FC = () => {
 
         {/* Flashcard Container */}
         <div 
-            className="perspective-1000 w-full max-w-2xl h-[300px] md:h-[400px] cursor-pointer group relative"
+            className="perspective-1000 w-full max-w-2xl h-[400px] md:h-[500px] cursor-pointer group relative"
             onClick={() => setIsFlipped(!isFlipped)}
         >
             <div className={clsx(
@@ -476,14 +476,14 @@ const Review: React.FC = () => {
 
                 {/* Back */}
                 <div className="absolute top-0 left-0 w-full h-full backface-hidden rotate-y-180 flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-lg border border-gray-200">
-                    <div className="text-center space-y-3 w-full overflow-y-auto custom-scrollbar">
+                    <div className="text-center space-y-3 w-full overflow-y-auto custom-scrollbar flex flex-col items-center">
                         {'reading' in item && (
                             <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 inline-block">
                                 <p className="text-xl md:text-2xl text-black jp-text font-bold">{item.reading}</p>
                             </div>
                         )}
                         {'onyomi' in item && (
-                            <div className="grid grid-cols-2 gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200 text-sm">
+                            <div className="grid grid-cols-2 gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200 text-sm w-full max-w-xs">
                                 <div>
                                     <div className="text-[10px] font-bold text-[#FFD500] uppercase tracking-wider mb-1">Onyomi</div>
                                     <div className="text-black font-medium">{item.onyomi}</div>
@@ -495,19 +495,43 @@ const Review: React.FC = () => {
                             </div>
                         )}
                         
-                        <div className="w-8 h-1 bg-[#FFD500] rounded-full mx-auto"></div>
+                        <div className="w-8 h-1 bg-[#FFD500] rounded-full mx-auto my-2"></div>
                         
                         <p className="text-lg md:text-xl font-bold text-black leading-snug">
                             {'meaning' in item ? item.meaning : item.explanation}
                         </p>
                         
-                         {'example' in item && (
-                             <p className="text-gray-600 italic mt-2 bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm">
+                        {/* Part of Speech for Vocab */}
+                        {'partOfSpeech' in item && (
+                            <div className="mt-1">
+                                <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded border border-gray-200 uppercase tracking-wide">
+                                    {item.partOfSpeech}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Conjugations Display */}
+                        {'conjugations' in item && item.conjugations && Object.keys(item.conjugations).length > 0 && (
+                             <div className="mt-3 w-full bg-gray-50 rounded-lg border border-gray-200 p-2">
+                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Conjugations</p>
+                                 <div className="grid grid-cols-2 gap-2 text-sm">
+                                     {Object.entries(item.conjugations).map(([form, value]) => (
+                                         <div key={form} className="text-left bg-white p-1 rounded border border-gray-100">
+                                             <span className="text-[10px] text-gray-400 font-bold capitalize block">{form}</span>
+                                             <span className="text-black jp-text">{value}</span>
+                                         </div>
+                                     ))}
+                                 </div>
+                             </div>
+                        )}
+
+                        {'example' in item && (
+                             <p className="text-gray-600 italic mt-2 bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm w-full">
                                  "{(item as any).example}"
                              </p>
                          )}
                          {'examples' in item && item.examples && (
-                             <ul className="text-gray-600 italic mt-2 bg-gray-50 p-3 rounded-lg border border-gray-200 text-left list-disc list-inside space-y-1 text-sm">
+                             <ul className="text-gray-600 italic mt-2 bg-gray-50 p-3 rounded-lg border border-gray-200 text-left list-disc list-inside space-y-1 text-sm w-full">
                                  {(item as GrammarItem).examples.map((ex, i) => <li key={i}>{ex}</li>)}
                              </ul>
                          )}

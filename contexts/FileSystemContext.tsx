@@ -29,7 +29,7 @@ const FILE_NAMES = {
 };
 
 const INITIAL_HEADERS = {
-  [DataType.VOCAB]: 'id,word,reading,meaning,jlpt,chapter',
+  [DataType.VOCAB]: 'id,word,reading,meaning,partOfSpeech,conjugations,jlpt,chapter',
   [DataType.KANJI]: 'id,character,onyomi,kunyomi,meaning,jlpt,strokes,chapter',
   [DataType.GRAMMAR]: 'id,rule,explanation,examples,jlpt,chapter',
   [DataType.STATS]: 'date,category,itemId,result'
@@ -37,11 +37,20 @@ const INITIAL_HEADERS = {
 
 // --- Sample Data for Demo Mode ---
 const SAMPLE_VOCAB: VocabItem[] = [
-  { id: '1', word: '猫', reading: 'ねこ', meaning: 'Cat', jlpt: 'N5', chapter: '1' },
-  { id: '2', word: '食べる', reading: 'たべる', meaning: 'To eat', jlpt: 'N5', chapter: '2' },
-  { id: '3', word: '図書館', reading: 'としょかん', meaning: 'Library', jlpt: 'N4', chapter: '5' },
-  { id: '4', word: '素晴らしい', reading: 'すばらしい', meaning: 'Wonderful', jlpt: 'N3', chapter: '10' },
-  { id: '5', word: '冒険', reading: 'ぼうけん', meaning: 'Adventure', jlpt: 'N2', chapter: '15' },
+  { id: '1', word: '猫', reading: 'ねこ', meaning: 'Cat', partOfSpeech: 'Noun', jlpt: 'N5', chapter: '1' },
+  { 
+      id: '2', 
+      word: '食べる', 
+      reading: 'たべる', 
+      meaning: 'To eat', 
+      partOfSpeech: 'Ichidan Verb', 
+      conjugations: { te: '食べて', masu: '食べます', nai: '食べない', ta: '食べた' },
+      jlpt: 'N5', 
+      chapter: '2' 
+  },
+  { id: '3', word: '図書館', reading: 'としょかん', meaning: 'Library', partOfSpeech: 'Noun', jlpt: 'N4', chapter: '5' },
+  { id: '4', word: '素晴らしい', reading: 'すばらしい', meaning: 'Wonderful', partOfSpeech: 'I-Adjective', jlpt: 'N3', chapter: '10' },
+  { id: '5', word: '冒険', reading: 'ぼうけん', meaning: 'Adventure', partOfSpeech: 'Noun', jlpt: 'N2', chapter: '15' },
 ];
 
 const SAMPLE_KANJI: KanjiItem[] = [
@@ -91,12 +100,26 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   try {
                       examples = JSON.parse(examples);
                   } catch (e) {
-                      // Fallback for old data or errors
                       examples = item.example ? [item.example] : [];
                   }
               }
               return { ...item, examples: Array.isArray(examples) ? examples : [] };
           }) as unknown as T[];
+      }
+      if (type === DataType.VOCAB) {
+        return data.map(item => {
+            let conjugations = item.conjugations;
+            if (typeof conjugations === 'string' && conjugations.trim() !== '') {
+                try {
+                    conjugations = JSON.parse(conjugations);
+                } catch (e) {
+                    conjugations = {};
+                }
+            } else {
+                conjugations = {};
+            }
+            return { ...item, conjugations };
+        }) as unknown as T[];
       }
       return data as T[];
   };

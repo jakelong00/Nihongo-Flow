@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
-import { Plus, AlertCircle, Search, Trash2, Edit2, Check, CheckSquare, Square, X, MinusCircle, RotateCcw } from 'lucide-react';
+import { Plus, AlertCircle, Search, Trash2, Edit2, Check, CheckSquare, Square, X, MinusCircle, RotateCcw, Filter, ArrowUpDown } from 'lucide-react';
 import { DataType, GrammarItem, LearningStage, ReviewResult } from '../types';
 import { STRINGS } from '../constants/strings';
 import { fuzzySearch } from '../utils/textHelper';
@@ -14,6 +14,11 @@ const Grammar: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Filters & Sort State
+  const [filterLevel, setFilterLevel] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [sortBy, setSortBy] = useState<'id' | 'mastery_asc' | 'mastery_desc'>('id');
 
   const [formData, setFormData] = useState<Omit<GrammarItem, 'id'>>({
     rule: '',
@@ -113,10 +118,20 @@ const Grammar: React.FC = () => {
     }
   };
 
-  // Use fuzzySearch for grammar rules and explanations
-  const filteredData = grammarData.filter(g => 
-    fuzzySearch(searchTerm, g.rule, g.explanation)
-  );
+  const filteredData = useMemo(() => {
+    let data = grammarData.filter(g => {
+        const matchSearch = fuzzySearch(searchTerm, g.rule, g.explanation);
+        const matchLevel = filterLevel === 'All' || g.jlpt === filterLevel;
+        const matchStatus = filterStatus === 'All' || getLearningStage(DataType.GRAMMAR, g.id) === filterStatus;
+        return matchSearch && matchLevel && matchStatus;
+    });
+
+    return data.sort((a, b) => {
+        if (sortBy === 'mastery_asc') return getMasteryPercentage(DataType.GRAMMAR, a.id) - getMasteryPercentage(DataType.GRAMMAR, b.id);
+        if (sortBy === 'mastery_desc') return getMasteryPercentage(DataType.GRAMMAR, b.id) - getMasteryPercentage(DataType.GRAMMAR, a.id);
+        return parseInt(b.id) - parseInt(a.id);
+    });
+  }, [grammarData, searchTerm, filterLevel, filterStatus, sortBy, getMasteryPercentage, getLearningStage]);
 
   const getStatusColor = (id: string) => {
     const stage = getLearningStage(DataType.GRAMMAR, id);
@@ -149,18 +164,6 @@ const Grammar: React.FC = () => {
              {isFormOpen && !editingId ? STRINGS.common.cancel : STRINGS.grammar.addBtn}
             </button>
         </div>
-      </div>
-
-      <div className="mb-6 relative">
-        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            <ThemedIcon iconKey="actionSearch" Fallback={Search} size={20} />
-        </div>
-        <input 
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 outline-none focus:ring-2 focus:ring-[#FFD500] shadow-sm transition-shadow text-black bg-white placeholder-gray-400" 
-            placeholder={STRINGS.grammar.searchPlaceholder}
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-        />
       </div>
 
       {isFormOpen && (
@@ -213,6 +216,54 @@ const Grammar: React.FC = () => {
           </form>
          </div>
       )}
+
+      {/* Toolbar: Search + Filters */}
+      <div className="mb-6 space-y-3">
+        <div className="relative">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <ThemedIcon iconKey="actionSearch" Fallback={Search} size={20} />
+            </div>
+            <input 
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 outline-none focus:ring-2 focus:ring-[#FFD500] shadow-sm transition-shadow text-black bg-white placeholder-gray-400" 
+                placeholder={STRINGS.grammar.searchPlaceholder}
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+            />
+        </div>
+
+        <div className="flex flex-wrap gap-2 items-center">
+             <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                 <Filter size={14} className="text-gray-500" />
+                 <span className="font-bold text-xs uppercase text-gray-500 mr-1">Level:</span>
+                 <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} className="bg-transparent outline-none font-medium">
+                     <option value="All">All</option>
+                     {['N5','N4','N3','N2','N1'].map(l => <option key={l} value={l}>{l}</option>)}
+                 </select>
+             </div>
+
+             <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                 <Filter size={14} className="text-gray-500" />
+                 <span className="font-bold text-xs uppercase text-gray-500 mr-1">Status:</span>
+                 <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-transparent outline-none font-medium">
+                     <option value="All">All</option>
+                     <option value={LearningStage.NEW}>New</option>
+                     <option value={LearningStage.LEARNING}>Learning</option>
+                     <option value={LearningStage.REVIEW}>Review</option>
+                     <option value={LearningStage.MASTERED}>Mastered</option>
+                 </select>
+             </div>
+
+             <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm ml-auto">
+                 <ArrowUpDown size={14} className="text-gray-500" />
+                 <span className="font-bold text-xs uppercase text-gray-500 mr-1">Sort:</span>
+                 <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="bg-transparent outline-none font-medium">
+                     <option value="id">Default (Newest)</option>
+                     <option value="mastery_asc">Mastery (Low-High)</option>
+                     <option value="mastery_desc">Mastery (High-Low)</option>
+                 </select>
+             </div>
+        </div>
+      </div>
 
       <div className="space-y-4">
         {filteredData.map(g => {

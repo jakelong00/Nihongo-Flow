@@ -78,8 +78,8 @@ export const toCSV = <T extends object>(data: T[]): string => {
       return headers.map(fieldName => {
         let val = (row as any)[fieldName];
         
-        // Handle Arrays (e.g. Grammar examples)
-        if (Array.isArray(val)) {
+        // Handle Arrays or Objects (e.g. Grammar examples, Vocab conjugations)
+        if (typeof val === 'object' && val !== null) {
             val = JSON.stringify(val);
         }
 

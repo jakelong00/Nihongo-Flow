@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
-import { Plus, AlertCircle, Search, Trash2, Edit2, Check, CheckSquare, Square, X, RotateCcw } from 'lucide-react';
+import { Plus, AlertCircle, Search, Trash2, Edit2, Check, CheckSquare, Square, X, RotateCcw, Filter, ArrowUpDown } from 'lucide-react';
 import { DataType, KanjiItem, LearningStage, ReviewResult } from '../types';
 import { STRINGS } from '../constants/strings';
 import { fuzzySearch } from '../utils/textHelper';
@@ -14,6 +14,11 @@ const Kanji: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Filters & Sort State
+  const [filterLevel, setFilterLevel] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [sortBy, setSortBy] = useState<'id' | 'mastery_asc' | 'mastery_desc' | 'strokes'>('id');
 
   const [formData, setFormData] = useState<Omit<KanjiItem, 'id'>>({
     character: '',
@@ -99,10 +104,21 @@ const Kanji: React.FC = () => {
     }
   };
 
-  // Use fuzzySearch to check character, meaning, onyomi, AND kunyomi
-  const filteredData = kanjiData.filter(k => 
-    fuzzySearch(searchTerm, k.character, k.meaning, k.onyomi, k.kunyomi)
-  );
+  const filteredData = useMemo(() => {
+    let data = kanjiData.filter(k => {
+        const matchSearch = fuzzySearch(searchTerm, k.character, k.meaning, k.onyomi, k.kunyomi);
+        const matchLevel = filterLevel === 'All' || k.jlpt === filterLevel;
+        const matchStatus = filterStatus === 'All' || getLearningStage(DataType.KANJI, k.id) === filterStatus;
+        return matchSearch && matchLevel && matchStatus;
+    });
+
+    return data.sort((a, b) => {
+        if (sortBy === 'mastery_asc') return getMasteryPercentage(DataType.KANJI, a.id) - getMasteryPercentage(DataType.KANJI, b.id);
+        if (sortBy === 'mastery_desc') return getMasteryPercentage(DataType.KANJI, b.id) - getMasteryPercentage(DataType.KANJI, a.id);
+        if (sortBy === 'strokes') return (parseInt(a.strokes) || 0) - (parseInt(b.strokes) || 0);
+        return parseInt(b.id) - parseInt(a.id);
+    });
+  }, [kanjiData, searchTerm, filterLevel, filterStatus, sortBy, getMasteryPercentage, getLearningStage]);
 
   const getStatusBorder = (id: string) => {
       const stage = getLearningStage(DataType.KANJI, id);
@@ -137,18 +153,6 @@ const Kanji: React.FC = () => {
         </div>
       </div>
 
-      <div className="mb-6 relative">
-        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            <ThemedIcon iconKey="actionSearch" Fallback={Search} size={20} />
-        </div>
-        <input 
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 outline-none focus:ring-2 focus:ring-[#FFD500] shadow-sm transition-shadow text-black bg-white placeholder-gray-400" 
-            placeholder={STRINGS.kanji.searchPlaceholder}
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-        />
-      </div>
-
       {isFormOpen && (
          <div className="bg-white p-4 md:p-6 rounded-xl shadow-md border border-gray-200 mb-8 animate-fade-in">
            <h3 className="font-bold text-lg mb-4 text-black">{editingId ? STRINGS.common.edit : STRINGS.kanji.addBtn}</h3>
@@ -175,6 +179,55 @@ const Kanji: React.FC = () => {
           </form>
          </div>
       )}
+
+      {/* Toolbar: Search + Filters */}
+      <div className="mb-6 space-y-3">
+        <div className="relative">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <ThemedIcon iconKey="actionSearch" Fallback={Search} size={20} />
+            </div>
+            <input 
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 outline-none focus:ring-2 focus:ring-[#FFD500] shadow-sm transition-shadow text-black bg-white placeholder-gray-400" 
+                placeholder={STRINGS.kanji.searchPlaceholder}
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+            />
+        </div>
+
+        <div className="flex flex-wrap gap-2 items-center">
+             <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                 <Filter size={14} className="text-gray-500" />
+                 <span className="font-bold text-xs uppercase text-gray-500 mr-1">Level:</span>
+                 <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} className="bg-transparent outline-none font-medium">
+                     <option value="All">All</option>
+                     {['N5','N4','N3','N2','N1'].map(l => <option key={l} value={l}>{l}</option>)}
+                 </select>
+             </div>
+
+             <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                 <Filter size={14} className="text-gray-500" />
+                 <span className="font-bold text-xs uppercase text-gray-500 mr-1">Status:</span>
+                 <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-transparent outline-none font-medium">
+                     <option value="All">All</option>
+                     <option value={LearningStage.NEW}>New</option>
+                     <option value={LearningStage.LEARNING}>Learning</option>
+                     <option value={LearningStage.REVIEW}>Review</option>
+                     <option value={LearningStage.MASTERED}>Mastered</option>
+                 </select>
+             </div>
+
+             <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm ml-auto">
+                 <ArrowUpDown size={14} className="text-gray-500" />
+                 <span className="font-bold text-xs uppercase text-gray-500 mr-1">Sort:</span>
+                 <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="bg-transparent outline-none font-medium">
+                     <option value="id">Default (Newest)</option>
+                     <option value="mastery_asc">Mastery (Low-High)</option>
+                     <option value="mastery_desc">Mastery (High-Low)</option>
+                     <option value="strokes">Strokes</option>
+                 </select>
+             </div>
+        </div>
+      </div>
 
       {/* Grid: 2 cols on mobile, 3 on tablet, 4 on large, 6 on xl */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-4">
