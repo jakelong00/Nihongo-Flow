@@ -1,43 +1,51 @@
 name: 'Deploy Website'
 
-# Trigger Configuration
 on:
   push:
     branches: ['main']
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # Build Job
   build:
     name: 'Build'
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout Code'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4 # FIXED: Changed v5 to v4 (current stable)
+
       - name: 'Setup Node'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4 # FIXED: Changed v6 to v4 (current stable)
         with:
-          node-version: '22'
+          node-version: '20' # Recommendation: Use 20 (LTS) or 22
+
       - name: 'Build Website'
-        run: npm ci && npm run build
+        # FIXED: Changed 'npm ci' to 'npm install'
+        # 'npm install' works even if package-lock.json is missing
+        run: npm install && npm run build
+
       - name: 'Upload artifact'
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: ./doc
-  # Deploy Job
+          # FIXED: Changed './doc' to './dist'
+          # Vite builds to 'dist' by default
+          path: ./dist
+
   deploy:
     name: 'Deploy'
     needs: build
-    permissions:
-      pages: write
-      id-token: write
-    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
     steps:
       - name: 'Deploy to GitHub Pages'
         id: deployment
