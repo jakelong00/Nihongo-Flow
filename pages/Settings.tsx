@@ -2,7 +2,6 @@ import React from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { FolderX, Download } from 'lucide-react';
 import { toCSV } from '../utils/csvHelper';
-import { DataType } from '../types';
 import { STRINGS } from '../constants/strings';
 import { ThemedIcon } from '../components/ThemedIcon';
 

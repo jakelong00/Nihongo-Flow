@@ -54,7 +54,7 @@ const Review: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 });
+  const [, setSessionStats] = useState({ correct: 0, total: 0 });
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [config, setConfig] = useState({ levels: [] as string[], chapters: [] as string[], limit: 20 });

@@ -1,4 +1,3 @@
-import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { FileProvider } from './contexts/FileSystemContext';
 import Layout from './components/Layout';

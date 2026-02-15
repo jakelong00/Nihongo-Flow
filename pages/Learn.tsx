@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
-import { DataType, ReviewResult, GrammarItem } from '../types';
-import { BookOpen, ChevronLeft, ChevronRight, Check, RefreshCw } from 'lucide-react';
+import { DataType, ReviewResult } from '../types';
+import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { STRINGS } from '../constants/strings';
 import { ThemedIcon } from '../components/ThemedIcon';
 import clsx from 'clsx';
