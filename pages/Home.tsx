@@ -1,13 +1,15 @@
+
 import React, { useState } from 'react';
-import { FolderPlus, CheckCircle, AlertCircle, ArrowRight, Database, AlertTriangle, Leaf } from 'lucide-react';
+import { FolderPlus, CheckCircle, AlertCircle, ArrowRight, Database, AlertTriangle, Leaf, Info } from 'lucide-react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { useNavigate } from 'react-router-dom';
 import { DataType } from '../types';
 import { STRINGS } from '../constants/strings';
 import { ThemedIcon } from '../components/ThemedIcon';
+import clsx from 'clsx';
 
 const Home: React.FC = () => {
-  const { dirHandle, isLocalMode, selectDirectory, useBrowserStorage, filesStatus, isLoading } = useFileSystem();
+  const { dirHandle, isLocalMode, selectDirectory, useBrowserStorage, filesStatus, isLoading, isFileSystemSupported } = useFileSystem();
   const navigate = useNavigate();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -24,19 +26,17 @@ const Home: React.FC = () => {
   };
 
   const handleSelectDirectory = async () => {
+    if (!isFileSystemSupported) return;
     setErrorMsg(null);
     try {
         await selectDirectory();
     } catch (error: any) {
         const isSecurityError = error.name === 'SecurityError' || 
                                 (error.message && error.message.includes('sub frames'));
-        const isNotSupported = error.message === 'NOT_SUPPORTED';
         const isAbort = error.name === 'AbortError';
 
         if (isSecurityError) {
             setErrorMsg(STRINGS.home.errors.security);
-        } else if (isNotSupported) {
-            setErrorMsg(STRINGS.home.errors.notSupported);
         } else if (!isAbort) {
             setErrorMsg(`${STRINGS.home.errors.generic}${error.message || 'Unknown error'}`);
         }
@@ -58,6 +58,17 @@ const Home: React.FC = () => {
 
         {!isReady ? (
           <div className="space-y-4">
+            {/* Show info notice if FS API is not supported (iOS, Safari, etc.) */}
+            {!isFileSystemSupported && (
+                <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex items-start gap-3 text-xs md:text-sm text-blue-800 animate-fade-in mb-2">
+                    <ThemedIcon iconKey="iconInfo" Fallback={Info} className="flex-shrink-0 mt-0.5" size={18} />
+                    <div>
+                        <p className="font-bold mb-1">Device Support Note</p>
+                        <p className="opacity-80">Direct folder access is restricted by your mobile browser. We recommend using <strong>Browser Storage</strong> below for the best experience on this device.</p>
+                    </div>
+                </div>
+            )}
+
             {errorMsg && (
                 <div className="bg-red-50 border border-red-200 p-3 rounded-2xl flex items-start gap-3 text-xs md:text-sm text-red-700 animate-fade-in">
                     <ThemedIcon iconKey="statusError" Fallback={AlertTriangle} className="flex-shrink-0 mt-0.5" size={16} />
@@ -65,7 +76,13 @@ const Home: React.FC = () => {
                 </div>
             )}
 
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center hover:bg-gray-100 transition-all duration-300">
+            {/* Folder Selection Card (Only prominent if supported) */}
+            <div className={clsx(
+                "border rounded-2xl p-6 text-center transition-all duration-300",
+                isFileSystemSupported 
+                    ? "bg-gray-50 border-gray-200 hover:bg-gray-100" 
+                    : "bg-gray-50 border-gray-100 opacity-60 grayscale"
+            )}>
               <div className="w-10 h-10 mx-auto mb-3 text-black">
                 <ThemedIcon iconKey="homeFolderSelect" Fallback={FolderPlus} className="w-full h-full" />
               </div>
@@ -73,8 +90,14 @@ const Home: React.FC = () => {
                 {STRINGS.home.selectFolderDesc}
               </p>
               <button
+                disabled={!isFileSystemSupported}
                 onClick={handleSelectDirectory}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[#FFD500] hover:bg-[#E6C000] text-black font-bold rounded-xl transition-all transform hover:scale-105 shadow-md text-sm"
+                className={clsx(
+                    "inline-flex items-center gap-2 px-6 py-3 font-bold rounded-xl transition-all transform text-sm shadow-md",
+                    isFileSystemSupported 
+                        ? "bg-[#FFD500] hover:bg-[#E6C000] text-black hover:scale-105" 
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                )}
               >
                 <ThemedIcon iconKey="homeFolderSelect" Fallback={FolderPlus} size={18} />
                 {STRINGS.home.btnSelect}
@@ -87,14 +110,19 @@ const Home: React.FC = () => {
                 </div>
                 <div className="relative flex justify-center text-xs">
                     <span className="px-3 py-1 rounded-full bg-white text-gray-500 font-medium border border-gray-200">
-                      {STRINGS.home.browserStorageOption}
+                      {isFileSystemSupported ? STRINGS.home.browserStorageOption : "Recommended for this device"}
                     </span>
                 </div>
             </div>
 
             <button
                 onClick={useBrowserStorage}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white hover:bg-gray-50 border-2 border-gray-200 text-gray-600 font-bold rounded-xl transition-all hover:border-gray-300 text-sm"
+                className={clsx(
+                    "w-full flex items-center justify-center gap-2 px-4 py-3 font-bold rounded-xl transition-all text-sm shadow-sm",
+                    !isFileSystemSupported 
+                        ? "bg-[#FFD500] hover:bg-[#E6C000] text-black border-2 border-[#D4B200]" 
+                        : "bg-white hover:bg-gray-50 border-2 border-gray-200 text-gray-600 hover:border-gray-300"
+                )}
             >
                 <ThemedIcon iconKey="homeStorageBrowser" Fallback={Database} size={18} />
                 {STRINGS.home.btnBrowserStorage}

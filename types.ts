@@ -12,9 +12,17 @@ export interface VocabItem {
   reading: string;
   meaning: string;
   partOfSpeech: string;
-  conjugations?: Record<string, string>; // e.g. { te: '...', nai: '...' }
   jlpt: string;
   chapter: string;
+  // Specific conjugation fields for better CSV readability
+  te?: string;
+  nai?: string;
+  masu?: string;
+  ta?: string;
+  potential?: string;
+  volitional?: string;
+  passive?: string;
+  causative?: string;
 }
 
 export interface KanjiItem {
@@ -32,7 +40,7 @@ export interface GrammarItem {
   id: string;
   rule: string;
   explanation: string;
-  examples: string[]; // Changed from single example string to array
+  examples: string[];
   jlpt: string;
   chapter: string;
 }
@@ -45,7 +53,7 @@ export enum ReviewResult {
 }
 
 export interface StatItem {
-  date: string; // ISO date string
+  date: string;
   category: DataType;
   itemId: string;
   result: ReviewResult;
@@ -61,6 +69,7 @@ export enum LearningStage {
 export interface FileContextType {
   dirHandle: FileSystemDirectoryHandle | null;
   isLocalMode: boolean;
+  isFileSystemSupported: boolean;
   filesStatus: Record<string, boolean>;
   vocabData: VocabItem[];
   kanjiData: KanjiItem[];
@@ -70,23 +79,20 @@ export interface FileContextType {
   selectDirectory: () => Promise<void>;
   useBrowserStorage: () => Promise<void>;
   
-  // CRUD - Vocab
   addVocab: (item: Omit<VocabItem, 'id'>) => Promise<void>;
   updateVocab: (item: VocabItem) => Promise<void>;
   deleteVocab: (ids: string[]) => Promise<void>;
 
-  // CRUD - Kanji
   addKanji: (item: Omit<KanjiItem, 'id'>) => Promise<void>;
   updateKanji: (item: KanjiItem) => Promise<void>;
   deleteKanji: (ids: string[]) => Promise<void>;
 
-  // CRUD - Grammar
   addGrammar: (item: Omit<GrammarItem, 'id'>) => Promise<void>;
   updateGrammar: (item: GrammarItem) => Promise<void>;
   deleteGrammar: (ids: string[]) => Promise<void>;
 
-  // Progress
   logReview: (category: DataType, itemId: string, result: ReviewResult) => Promise<void>;
+  resetItemStats: (category: DataType, itemId: string) => Promise<void>;
   getLearningStage: (category: DataType, itemId: string) => LearningStage;
   getMasteryPercentage: (category: DataType, itemId: string) => number;
   
