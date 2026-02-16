@@ -1,96 +1,43 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { DataType, ReviewResult, VocabItem, KanjiItem, GrammarItem, StatItem } from '../types';
-import { BrainCircuit, BookOpen, Languages, GraduationCap, Check, RefreshCw, X, Clock, Sparkles, SlidersHorizontal, Info, HelpCircle, Layers, Play } from 'lucide-react';
+import { BrainCircuit, BookOpen, Languages, GraduationCap, Check, RefreshCw, X, SlidersHorizontal, Layers, Trophy, Sparkles, HelpCircle, ArrowRight, BarChart3, TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
 import { STRINGS } from '../constants/strings';
 import { ThemedIcon } from '../components/ThemedIcon';
+import { ShibaMascot } from '../components/ShibaMascot';
 
 type ReviewItemUnion = (VocabItem | KanjiItem | GrammarItem) & { type: DataType; chapter?: string };
 
-// --- SRS Logic ---
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-interface ItemSRSStatus {
-  interval: number; // in days
-  dueDate: Date;
-  isNew: boolean;
-  isDue: boolean;
-}
-
-const calculateSRSStatus = (category: DataType, itemId: string, stats: StatItem[]): ItemSRSStatus => {
-  const itemStats = stats
-    .filter(s => s.category === category && s.itemId === itemId)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  if (itemStats.length === 0) {
-    return { interval: 0, dueDate: new Date(), isNew: true, isDue: false };
-  }
-
-  let interval = 0; 
-  for (const stat of itemStats) {
-    switch (stat.result) {
-      case ReviewResult.MASTERED: interval = 999; break;
-      case ReviewResult.EASY: interval = interval === 0 ? 1 : interval * 2.5; break;
-      case ReviewResult.HARD: interval = interval === 0 ? 0.5 : interval * 1.2; break;
-      case ReviewResult.FORGOT: interval = 0; break;
-    }
-  }
-
-  // If interval is 999, it's effectively mastered
-  if (interval >= 999) {
-      return { interval: 999, dueDate: new Date(Date.now() + 999 * ONE_DAY_MS), isNew: false, isDue: false };
-  }
-
-  const lastReview = new Date(itemStats[itemStats.length - 1].date);
-  const dueDate = new Date(lastReview.getTime() + interval * ONE_DAY_MS);
-  
-  return { interval, dueDate, isNew: false, isDue: dueDate.getTime() <= Date.now() };
-};
-
 const Review: React.FC = () => {
   const { vocabData, kanjiData, grammarData, statsData, logReview } = useFileSystem();
+  
   const [sessionItems, setSessionItems] = useState<ReviewItemUnion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [, setSessionStats] = useState({ correct: 0, total: 0 });
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [isConfiguring, setIsConfiguring] = useState(false);
-  const [showInfo, setShowInfo] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const [config, setConfig] = useState({ levels: [] as string[], chapters: [] as string[], limit: 20 });
+  const [mascotMessage, setMascotMessage] = useState("Let's train!");
 
-  const itemStatuses = useMemo(() => {
-    const statuses = new Map<string, ItemSRSStatus>();
-    const processItems = (items: { id: string }[], type: DataType) => {
-      items.forEach(item => statuses.set(`${type}_${item.id}`, calculateSRSStatus(type, item.id, statsData)));
-    };
-    processItems(vocabData, DataType.VOCAB);
-    processItems(kanjiData, DataType.KANJI);
-    processItems(grammarData, DataType.GRAMMAR);
-    return statuses;
-  }, [vocabData, kanjiData, grammarData, statsData]);
-
-  const availableLevels = useMemo(() => ['N5', 'N4', 'N3', 'N2', 'N1'], []);
-  const availableChapters = useMemo(() => {
-      const chapters = new Set<string>();
-      [...vocabData, ...kanjiData, ...grammarData].forEach(i => i.chapter && chapters.add(i.chapter));
-      return Array.from(chapters).sort((a, b) => parseInt(a) - parseInt(b));
-  }, [vocabData, kanjiData, grammarData]);
-
-  const getCategoryCounts = (type: DataType, data: { id: string }[]) => {
-    let due = 0;
-    let newItems = 0;
-    data.forEach(item => {
-      const status = itemStatuses.get(`${type}_${item.id}`);
-      if (status?.isNew) newItems++;
-      else if (status?.isDue) due++;
-    });
-    return { due, newItems, total: data.length };
-  };
-
-  const vocabCounts = getCategoryCounts(DataType.VOCAB, vocabData);
-  const kanjiCounts = getCategoryCounts(DataType.KANJI, kanjiData);
-  const grammarCounts = getCategoryCounts(DataType.GRAMMAR, grammarData);
+  // Session Stats
+  const [results, setResults] = useState<{
+    correct: number;
+    total: number;
+    breakdown: Record<DataType, { correct: number; total: number }>;
+  }>({
+    correct: 0,
+    total: 0,
+    breakdown: {
+        [DataType.VOCAB]: { correct: 0, total: 0 },
+        [DataType.KANJI]: { correct: 0, total: 0 },
+        [DataType.GRAMMAR]: { correct: 0, total: 0 },
+        [DataType.STATS]: { correct: 0, total: 0 }
+    }
+  });
 
   const startSession = (types: DataType[]) => {
     let pool: ReviewItemUnion[] = [];
@@ -101,473 +48,320 @@ const Review: React.FC = () => {
     if (config.levels.length > 0) pool = pool.filter(i => config.levels.includes(i.jlpt));
     if (config.chapters.length > 0) pool = pool.filter(i => i.chapter && config.chapters.includes(i.chapter));
 
-    const dueItems = pool.filter(i => itemStatuses.get(`${i.type}_${i.id}`)?.isDue);
-    const newItems = pool.filter(i => itemStatuses.get(`${i.type}_${i.id}`)?.isNew);
-    
-    const shuffledDue = [...dueItems].sort(() => 0.5 - Math.random());
-    const shuffledNew = [...newItems].sort(() => 0.5 - Math.random());
-    const shuffledPool = [...pool].sort(() => 0.5 - Math.random());
-
-    let selected: ReviewItemUnion[] = [];
-    const limit = config.limit;
-
-    selected = shuffledDue.slice(0, limit);
-    if (selected.length < limit) selected = [...selected, ...shuffledNew.slice(0, limit - selected.length)];
-    if (selected.length === 0 && pool.length > 0) selected = shuffledPool.slice(0, limit);
-    
-    if (selected.length === 0) {
-        alert(STRINGS.review.noItemsAlert);
-        return;
-    }
+    const selected = [...pool].sort(() => 0.5 - Math.random()).slice(0, config.limit);
+    if (selected.length === 0) return alert("NO ITEMS FOUND!");
 
     setSessionItems(selected);
     setCurrentIndex(0);
     setIsFlipped(false);
-    setSessionStats({ correct: 0, total: 0 });
     setSessionStarted(true);
     setIsConfiguring(false);
+    setIsTransitioning(false);
+    setShowSummary(false);
+    setResults({
+        correct: 0,
+        total: 0,
+        breakdown: {
+            [DataType.VOCAB]: { correct: 0, total: 0 },
+            [DataType.KANJI]: { correct: 0, total: 0 },
+            [DataType.GRAMMAR]: { correct: 0, total: 0 },
+            [DataType.STATS]: { correct: 0, total: 0 }
+        }
+    });
+    setMascotMessage("Ikuzo!");
   };
 
-  const handleResult = async (result: ReviewResult) => {
-    const currentItem = sessionItems[currentIndex];
-    await logReview(currentItem.type, currentItem.id, result);
+  const handleResult = useCallback(async (result: ReviewResult) => {
+    if (isTransitioning || !sessionItems[currentIndex]) return;
+    setIsTransitioning(true);
     
-    setSessionStats(prev => ({
+    const currentItem = sessionItems[currentIndex];
+    const isCorrect = result === ReviewResult.EASY || result === ReviewResult.MASTERED;
+
+    setResults(prev => ({
+        ...prev,
         total: prev.total + 1,
-        correct: result === ReviewResult.EASY ? prev.correct + 1 : prev.correct
+        correct: isCorrect ? prev.correct + 1 : prev.correct,
+        breakdown: {
+            ...prev.breakdown,
+            [currentItem.type]: {
+                total: prev.breakdown[currentItem.type].total + 1,
+                correct: isCorrect ? prev.breakdown[currentItem.type].correct + 1 : prev.breakdown[currentItem.type].correct
+            }
+        }
     }));
 
-    if (currentIndex < sessionItems.length - 1) {
-        setTimeout(() => {
+    if (isCorrect) setMascotMessage("Yatta!");
+    else setMascotMessage("Don't worry!");
+
+    await logReview(currentItem.type, currentItem.id, result);
+    setIsFlipped(false);
+
+    setTimeout(() => {
+        if (currentIndex < sessionItems.length - 1) {
             setCurrentIndex(prev => prev + 1);
-            setIsFlipped(false);
-        }, 150);
-    } else {
-        setSessionStarted(false);
-        setSessionItems([]);
-    }
-  };
+            setIsTransitioning(false);
+        } else {
+            setShowSummary(true);
+            setSessionStarted(false);
+            setIsTransitioning(false);
+        }
+    }, 400); 
+  }, [currentIndex, isTransitioning, sessionItems, logReview]);
 
-  const toggleConfig = (field: 'levels' | 'chapters', value: string) => {
-      setConfig(prev => {
-          const current = prev[field];
-          if (current.includes(value)) return { ...prev, [field]: current.filter(v => v !== value) };
-          else return { ...prev, [field]: [...current, value] };
-      });
-  };
+  useEffect(() => {
+    if (!sessionStarted || isConfiguring || showSummary) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        setIsFlipped(f => !f);
+      }
+      if (isFlipped && !isTransitioning) {
+        if (e.key === '1') handleResult(ReviewResult.FORGOT);
+        if (e.key === '2') handleResult(ReviewResult.HARD);
+        if (e.key === '3') handleResult(ReviewResult.EASY);
+      }
+      if (e.code === 'Escape') setSessionStarted(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [sessionStarted, isConfiguring, isFlipped, isTransitioning, handleResult, showSummary]);
 
-  if (isConfiguring) {
-      return (
-          <div className="p-4 md:p-8 max-w-4xl mx-auto h-full overflow-auto">
-              <div className="flex items-center gap-2 mb-4 cursor-pointer text-[#FFD500] font-bold" onClick={() => setIsConfiguring(false)}>
-                  <span>&larr; Back</span>
-              </div>
-              <h2 className="text-xl md:text-2xl font-black text-black mb-6 tracking-tight">{STRINGS.review.configTitle}</h2>
-              
-              <div className="bg-white p-5 rounded-xl shadow-md border border-gray-200 space-y-6">
-                  <div>
-                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
-                          <ThemedIcon iconKey="iconLayers" Fallback={Layers} size={14}/> Cards per Session
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                          {[10, 20, 30, 50].map(limit => (
-                              <button
-                                key={limit}
-                                onClick={() => setConfig(prev => ({ ...prev, limit }))}
-                                className={clsx(
-                                    "px-3 py-1.5 md:px-4 md:py-2 rounded-lg border-2 transition-all font-bold text-sm min-w-[50px]",
-                                    config.limit === limit 
-                                        ? "bg-[#FFD500] text-black border-[#FFD500] shadow-sm" 
-                                        : "bg-white text-gray-500 border-gray-200 hover:border-[#FFD500] hover:text-black"
-                                )}
-                              >
-                                  {limit}
-                              </button>
-                          ))}
-                      </div>
-                  </div>
+  // Session Statistics Summary View
+  if (showSummary) {
+    const accuracy = results.total > 0 ? Math.round((results.correct / results.total) * 100) : 0;
+    return (
+        <div className="min-h-full flex flex-col items-center justify-center p-6 bg-[#FAF9F6] animate-soft-in">
+            <div className="w-full max-w-2xl bg-white border border-[#4A4E69]/10 rounded-[56px] shadow-2xl overflow-hidden">
+                <div className="bg-[#78A2CC] p-12 text-center text-white relative">
+                    <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(white 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+                    <ShibaMascot size="md" message="Dojo clear!" className="mb-6 mx-auto" />
+                    <h2 className="anime-title text-3xl font-black uppercase tracking-tighter">Training Report</h2>
+                    <p className="text-[10px] font-black opacity-60 uppercase tracking-[0.4em] mt-2">Mission Parameters Completed</p>
+                </div>
 
-                  <div>
-                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
-                          <ThemedIcon iconKey="navGrammar" Fallback={GraduationCap} size={14}/> JLPT Level
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                          {availableLevels.map(level => (
-                              <button
-                                key={level}
-                                onClick={() => toggleConfig('levels', level)}
-                                className={clsx(
-                                    "px-3 py-1.5 rounded-full border-2 transition-all font-semibold text-xs",
-                                    config.levels.includes(level) 
-                                        ? "bg-[#FFD500] text-black border-[#FFD500] shadow-sm" 
-                                        : "bg-white text-gray-500 border-gray-200 hover:border-[#FFD500]"
-                                )}
-                              >
-                                  {level}
-                              </button>
-                          ))}
-                      </div>
-                  </div>
+                <div className="p-10 md:p-14 space-y-10">
+                    <div className="grid grid-cols-2 gap-8">
+                        <div className="bg-[#FAF9F6] p-8 rounded-[40px] border border-[#4A4E69]/5 text-center">
+                            <span className="text-[9px] font-black text-[#4A4E69]/30 uppercase tracking-widest block mb-2">Accuracy Rate</span>
+                            <span className="text-5xl font-black text-[#4A4E69] anime-title tracking-tighter">{accuracy}%</span>
+                        </div>
+                        <div className="bg-[#FAF9F6] p-8 rounded-[40px] border border-[#4A4E69]/5 text-center">
+                            <span className="text-[9px] font-black text-[#4A4E69]/30 uppercase tracking-widest block mb-2">Items Reviewed</span>
+                            <span className="text-5xl font-black text-[#4A4E69] anime-title tracking-tighter">{results.total}</span>
+                        </div>
+                    </div>
 
-                  <div>
-                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
-                          <ThemedIcon iconKey="navVocab" Fallback={BookOpen} size={14}/> Chapters
-                      </h3>
-                      <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                          {availableChapters.map(ch => (
-                              <button
-                                key={ch}
-                                onClick={() => toggleConfig('chapters', ch)}
-                                className={clsx(
-                                    "px-2 py-1 rounded-lg border text-xs transition-all font-medium",
-                                    config.chapters.includes(ch) 
-                                        ? "bg-[#FFD500] text-black border-[#FFD500] shadow-sm" 
-                                        : "bg-white text-gray-500 border-gray-200 hover:border-[#FFD500]"
-                                )}
-                              >
-                                  Ch. {ch}
-                              </button>
-                          ))}
-                      </div>
-                  </div>
-              </div>
-              
-              <div className="mt-6 p-5 bg-gray-100 rounded-xl border border-gray-200">
-                  <h3 className="font-bold text-black mb-4 text-lg">Ready to start?</h3>
-                  <div className="flex gap-3 flex-wrap">
-                      <button onClick={() => startSession([DataType.VOCAB])} className="flex-1 min-w-[100px] px-4 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-bold transition-all hover:-translate-y-1 shadow-sm text-sm">Vocab</button>
-                      <button onClick={() => startSession([DataType.KANJI])} className="flex-1 min-w-[100px] px-4 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-bold transition-all hover:-translate-y-1 shadow-sm text-sm">Kanji</button>
-                      <button onClick={() => startSession([DataType.GRAMMAR])} className="flex-1 min-w-[100px] px-4 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-bold transition-all hover:-translate-y-1 shadow-sm text-sm">Grammar</button>
-                      <button onClick={() => startSession([DataType.VOCAB, DataType.KANJI, DataType.GRAMMAR])} className="w-full md:w-auto px-8 py-3 bg-[#FFD500] text-black rounded-lg hover:bg-[#E6C000] font-bold shadow-lg transition-all hover:-translate-y-1 flex items-center justify-center gap-2 border-b-4 border-[#D4B200] text-sm">
-                          <ThemedIcon iconKey="iconPlay" Fallback={Play} fill="currentColor" size={18}/> Start Mix
-                      </button>
-                  </div>
-              </div>
-          </div>
-      );
+                    <div className="space-y-4">
+                        <h4 className="text-[10px] font-black text-[#4A4E69]/20 uppercase tracking-[0.4em] text-center mb-6">Subject Breakdown</h4>
+                        {[
+                            { label: 'Vocabulary', type: DataType.VOCAB, color: 'bg-[#78A2CC]' },
+                            { label: 'Kanji Dojo', type: DataType.KANJI, color: 'bg-[#FFB7C5]' },
+                            { label: 'Grammar Hub', type: DataType.GRAMMAR, color: 'bg-[#B4E4C3]' }
+                        ].map(sub => {
+                            const data = results.breakdown[sub.type];
+                            if (data.total === 0) return null;
+                            const perc = Math.round((data.correct / data.total) * 100);
+                            return (
+                                <div key={sub.type} className="flex items-center gap-6 group">
+                                    <div className="w-24 text-right">
+                                        <span className="text-[10px] font-black text-[#4A4E69] uppercase tracking-wider">{sub.label}</span>
+                                    </div>
+                                    <div className="flex-1 h-3 bg-[#FAF9F6] rounded-full overflow-hidden shadow-inner border border-[#4A4E69]/5">
+                                        <div className={clsx("h-full transition-all duration-1000", sub.color)} style={{ width: `${perc}%` }}></div>
+                                    </div>
+                                    <div className="w-12">
+                                        <span className="text-[11px] font-black text-[#4A4E69]">{perc}%</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="pt-8 flex flex-col sm:flex-row gap-4">
+                        <button 
+                            onClick={() => setShowSummary(false)}
+                            className="flex-1 py-5 bg-[#78A2CC] text-white rounded-[28px] font-black anime-title uppercase tracking-widest text-[11px] shadow-lg hover:bg-[#6b95c2] active:translate-y-1 transition-all"
+                        >
+                            Return to Dojo
+                        </button>
+                        <button 
+                            onClick={() => startSession([DataType.VOCAB, DataType.KANJI, DataType.GRAMMAR])}
+                            className="flex-1 py-5 bg-[#FAF9F6] border-2 border-[#4A4E69]/10 text-[#4A4E69] rounded-[28px] font-black anime-title uppercase tracking-widest text-[11px] hover:bg-white transition-all flex items-center justify-center gap-3"
+                        >
+                            <Sparkles size={16} className="text-[#FFB7C5]" /> Training Re-run
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
   }
 
   if (!sessionStarted) {
     return (
-        <div className="p-4 md:p-6 max-w-6xl mx-auto flex flex-col items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-2 mb-8 text-center">
-                <div className="bg-white p-3 rounded-full shadow-lg mb-1 border border-gray-200">
-                    <ThemedIcon iconKey="iconBrain" Fallback={BrainCircuit} size={32} className="text-[#FFD500]" />
+        <div className="min-h-full flex flex-col items-center justify-center p-4 md:p-8 bg-[#FAF9F6]">
+            <div className="w-full max-w-4xl bg-white border border-[#4A4E69]/10 rounded-[48px] shadow-[0_20px_50px_rgba(74,78,105,0.1)] overflow-hidden animate-soft-in">
+                <div className="pt-12 pb-8 px-8 text-center bg-gradient-to-b from-[#78A2CC]/5 to-transparent flex flex-col items-center">
+                    <ShibaMascot size="md" message="Dojo is open!" className="mb-6" />
+                    <h2 className="anime-title text-3xl font-black text-[#4A4E69] mb-3 tracking-tight uppercase">Mission Selection</h2>
+                    <p className="text-[11px] font-black text-[#4A4E69]/40 uppercase tracking-[0.4em] mb-4">Choose your learning path</p>
+                    <div className="w-16 h-1 bg-[#FFB7C5] mx-auto rounded-full"></div>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-black text-black tracking-tight">{STRINGS.review.title}</h2>
-                <p className="text-gray-500 text-sm md:text-base max-w-lg leading-relaxed">{STRINGS.review.description}</p>
-                
-                <div className="flex gap-2 mt-2 flex-wrap justify-center">
-                     <button 
-                        onClick={() => setIsConfiguring(true)}
-                        className="text-xs md:text-sm text-black flex items-center gap-2 font-bold bg-[#FFD500] hover:bg-[#E6C000] px-4 py-2 rounded-full transition-colors shadow-md"
-                    >
-                        <ThemedIcon iconKey="iconConfig" Fallback={SlidersHorizontal} size={14} /> {STRINGS.review.configureBtn}
-                    </button>
+
+                <div className="px-8 md:px-12 pb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[
+                          { type: DataType.VOCAB, label: 'Vocabulary', icon: BookOpen, color: 'bg-[#78A2CC]/10 text-[#78A2CC]' },
+                          { type: DataType.KANJI, label: 'Kanji', icon: Languages, color: 'bg-[#FFB7C5]/15 text-[#FFB7C5]' },
+                          { type: DataType.GRAMMAR, label: 'Grammar', icon: GraduationCap, color: 'bg-[#B4E4C3]/20 text-[#B4E4C3]' }
+                        ].map(mod => (
+                            <button 
+                              key={mod.type}
+                              onClick={() => startSession([mod.type])} 
+                              className="group flex flex-col items-center justify-center p-10 bg-white border border-[#4A4E69]/5 rounded-[40px] hover:border-[#78A2CC]/20 hover:shadow-xl transition-all duration-500 relative overflow-hidden active:scale-95"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/[0.02] opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                <div className={clsx("p-5 rounded-2xl mb-5 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 shadow-sm", mod.color)}>
+                                    <mod.icon size={28} />
+                                </div>
+                                <span className="font-black anime-title text-xs uppercase tracking-[0.15em] text-[#4A4E69]/70 group-hover:text-[#4A4E69] transition-colors">{mod.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="px-8 md:px-12 pb-12">
                     <button 
-                        onClick={() => setShowInfo(true)} 
-                        className="text-xs md:text-sm text-gray-600 hover:text-black flex items-center gap-2 font-bold bg-white hover:bg-gray-50 px-4 py-2 rounded-full transition-colors border border-gray-300"
+                        onClick={() => startSession([DataType.VOCAB, DataType.KANJI, DataType.GRAMMAR])} 
+                        className="group relative w-full overflow-hidden bg-[#78A2CC] text-white py-7 rounded-[32px] font-black anime-title text-sm tracking-[0.25em] shadow-lg hover:shadow-[#78A2CC]/30 hover:-translate-y-1 active:translate-y-0.5 transition-all flex items-center justify-center gap-4 uppercase"
                     >
-                        <ThemedIcon iconKey="iconInfo" Fallback={Info} size={14} /> How it works
+                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <Layers size={22} className="group-hover:rotate-12 transition-transform" /> 
+                        <span>[ Start Mixed Training ]</span>
+                        <div className="absolute left-0 bottom-0 h-1 bg-white/20 w-full"></div>
                     </button>
                 </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full mb-8 max-w-5xl px-0 md:px-4">
-                {/* Vocab Card */}
+            <div className="mt-10 flex gap-8 items-center animate-soft-in">
                 <button 
-                    onClick={() => startSession([DataType.VOCAB])}
-                    className="relative group p-5 bg-white border border-gray-200 rounded-xl hover:shadow-xl shadow-sm transition-all text-left overflow-hidden hover:-translate-y-1 duration-300"
+                    onClick={() => setIsConfiguring(true)} 
+                    className="flex items-center gap-2.5 text-[11px] font-black uppercase tracking-[0.25em] text-[#4A4E69]/30 hover:text-[#78A2CC] transition-all group"
                 >
-                    <div className="absolute top-[-20%] right-[-20%] p-4 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity rotate-12">
-                        <ThemedIcon iconKey="navVocab" Fallback={BookOpen} size={120} className="text-black" />
-                    </div>
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-[#FFD500] text-black rounded-lg group-hover:scale-110 transition-transform"><ThemedIcon iconKey="navVocab" Fallback={BookOpen} size={20}/></div>
-                        <div className="font-bold text-xl text-black">Vocabulary</div>
-                    </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded-lg border border-gray-200">
-                            <span className="flex items-center gap-2 text-gray-500 font-bold"><ThemedIcon iconKey="iconClock" Fallback={Clock} size={14} /> {STRINGS.review.labels.due}</span>
-                            <span className="bg-red-500 text-white px-2 py-0.5 rounded-md font-bold">{vocabCounts.due}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded-lg border border-gray-200">
-                            <span className="flex items-center gap-2 text-gray-500 font-bold"><ThemedIcon iconKey="iconSparkles" Fallback={Sparkles} size={14} /> {STRINGS.review.labels.new}</span>
-                            <span className="bg-[#FFD500] text-black px-2 py-0.5 rounded-md font-bold">{vocabCounts.newItems}</span>
-                        </div>
-                    </div>
-                </button>
-
-                {/* Kanji Card */}
-                 <button 
-                    onClick={() => startSession([DataType.KANJI])}
-                    className="relative group p-5 bg-white border border-gray-200 rounded-xl hover:shadow-xl shadow-sm transition-all text-left overflow-hidden hover:-translate-y-1 duration-300"
-                >
-                     <div className="absolute top-[-20%] right-[-20%] p-4 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity rotate-12">
-                        <ThemedIcon iconKey="navKanji" Fallback={Languages} size={120} className="text-black" />
-                    </div>
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-black text-white rounded-lg group-hover:scale-110 transition-transform"><ThemedIcon iconKey="navKanji" Fallback={Languages} size={20}/></div>
-                        <div className="font-bold text-xl text-black">Kanji</div>
-                    </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded-lg border border-gray-200">
-                            <span className="flex items-center gap-2 text-gray-500 font-bold"><ThemedIcon iconKey="iconClock" Fallback={Clock} size={14} /> {STRINGS.review.labels.due}</span>
-                            <span className="bg-red-500 text-white px-2 py-0.5 rounded-md font-bold">{kanjiCounts.due}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded-lg border border-gray-200">
-                            <span className="flex items-center gap-2 text-gray-500 font-bold"><ThemedIcon iconKey="iconSparkles" Fallback={Sparkles} size={14} /> {STRINGS.review.labels.new}</span>
-                            <span className="bg-black text-white px-2 py-0.5 rounded-md font-bold">{kanjiCounts.newItems}</span>
-                        </div>
-                    </div>
-                </button>
-
-                {/* Grammar Card */}
-                 <button 
-                    onClick={() => startSession([DataType.GRAMMAR])}
-                    className="relative group p-5 bg-white border border-gray-200 rounded-xl hover:shadow-xl shadow-sm transition-all text-left overflow-hidden hover:-translate-y-1 duration-300"
-                >
-                     <div className="absolute top-[-20%] right-[-20%] p-4 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity rotate-12">
-                        <ThemedIcon iconKey="navGrammar" Fallback={GraduationCap} size={120} className="text-black" />
-                    </div>
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-gray-500 text-white rounded-lg group-hover:scale-110 transition-transform"><ThemedIcon iconKey="navGrammar" Fallback={GraduationCap} size={20}/></div>
-                        <div className="font-bold text-xl text-black">Grammar</div>
-                    </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded-lg border border-gray-200">
-                            <span className="flex items-center gap-2 text-gray-500 font-bold"><ThemedIcon iconKey="iconClock" Fallback={Clock} size={14} /> {STRINGS.review.labels.due}</span>
-                            <span className="bg-red-500 text-white px-2 py-0.5 rounded-md font-bold">{grammarCounts.due}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded-lg border border-gray-200">
-                            <span className="flex items-center gap-2 text-gray-500 font-bold"><ThemedIcon iconKey="iconSparkles" Fallback={Sparkles} size={14} /> {STRINGS.review.labels.new}</span>
-                            <span className="bg-gray-500 text-white px-2 py-0.5 rounded-md font-bold">{grammarCounts.newItems}</span>
-                        </div>
-                    </div>
+                  <SlidersHorizontal size={14} className="group-hover:rotate-180 transition-transform duration-500" /> 
+                  Session Settings
                 </button>
             </div>
-             
-             <button 
-                onClick={() => startSession([DataType.VOCAB, DataType.KANJI, DataType.GRAMMAR])}
-                className="mt-2 px-8 py-4 bg-[#FFD500] hover:bg-[#E6C000] text-black font-extrabold text-base rounded-xl shadow-lg hover:scale-105 flex items-center gap-2 animate-pulse border-b-4 border-[#D4B200]"
-            >
-                <ThemedIcon iconKey="iconLayers" Fallback={Layers} size={20} />
-                {STRINGS.review.mixReviewBtn}
-            </button>
-
-            {/* SRS Info Modal */}
-            {showInfo && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowInfo(false)}>
-                    <div className="bg-white rounded-xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl animate-fade-in border border-gray-300" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-start mb-4">
-                            <h3 className="text-lg font-black text-black flex items-center gap-2">
-                                <ThemedIcon iconKey="navLearn" Fallback={BrainCircuit} className="text-[#FFD500]" size={24} /> 
-                                {STRINGS.review.guide.title}
-                            </h3>
-                            <button onClick={() => setShowInfo(false)} className="text-gray-400 hover:text-black p-1 rounded-full hover:bg-gray-100 transition-colors">
-                                <ThemedIcon iconKey="actionClose" Fallback={X} size={20}/>
-                            </button>
-                        </div>
-                        
-                        <p className="text-gray-600 mb-6 text-sm leading-relaxed">{STRINGS.review.guide.intro}</p>
-
-                        <div className="grid grid-cols-1 gap-4 mb-4">
-                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                <h4 className="font-bold text-black mb-2 pb-2 border-b border-gray-200 flex items-center gap-2 text-sm">
-                                    <ThemedIcon iconKey="iconClock" Fallback={Clock} size={16} className="text-gray-500" /> Stages
-                                </h4>
-                                <ul className="space-y-2">
-                                    <li className="flex gap-2 items-start">
-                                        <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5 flex-shrink-0"></div>
-                                        <div>
-                                            <div className="font-bold text-black text-xs">{STRINGS.review.guide.stages.new.title}</div>
-                                            <div className="text-xs text-gray-500">{STRINGS.review.guide.stages.new.desc}</div>
-                                        </div>
-                                    </li>
-                                    <li className="flex gap-2 items-start">
-                                        <div className="w-2 h-2 rounded-full bg-[#FFD500] mt-1.5 flex-shrink-0"></div>
-                                        <div>
-                                            <div className="font-bold text-black text-xs">{STRINGS.review.guide.stages.learning.title}</div>
-                                            <div className="text-xs text-gray-500">{STRINGS.review.guide.stages.learning.desc}</div>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-                            
-                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                <h4 className="font-bold text-black mb-2 pb-2 border-b border-gray-200 flex items-center gap-2 text-sm">
-                                    <ThemedIcon iconKey="iconInfo" Fallback={HelpCircle} size={16} className="text-gray-500" /> Actions
-                                </h4>
-                                <ul className="space-y-2">
-                                    <li className="flex gap-2 items-start">
-                                        <ThemedIcon iconKey="actionClose" Fallback={X} size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
-                                        <div>
-                                            <div className="font-bold text-black text-xs">{STRINGS.review.guide.actions.forgot.title}</div>
-                                            <div className="text-xs text-gray-500">{STRINGS.review.guide.actions.forgot.desc}</div>
-                                        </div>
-                                    </li>
-                                    <li className="flex gap-2 items-start">
-                                        <ThemedIcon iconKey="actionCheck" Fallback={Check} size={16} className="text-green-600 flex-shrink-0 mt-0.5" />
-                                        <div>
-                                            <div className="font-bold text-black text-xs">{STRINGS.review.guide.actions.easy.title}</div>
-                                            <div className="text-xs text-gray-500">{STRINGS.review.guide.actions.easy.desc}</div>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
   }
 
   const item = sessionItems[currentIndex];
+  if (!item) return null;
 
   return (
-    <div className="p-4 flex flex-col items-center h-full justify-center relative">
-        <div className="w-full flex justify-between items-center text-gray-500 mb-4 px-2 max-w-3xl">
-            <button onClick={() => setSessionStarted(false)} className="text-xs font-bold text-gray-500 hover:text-red-600 transition-colors bg-white px-2 py-1 rounded-lg border border-gray-200">
-                &times; {STRINGS.review.quitSession}
-            </button>
-            <div className="font-bold text-black bg-white px-3 py-1 rounded-full shadow-sm border border-gray-200 text-xs">
-                {currentIndex + 1} <span className="text-gray-300">/</span> {sessionItems.length}
-            </div>
+    <div className="h-full flex flex-col items-center justify-center p-6 bg-[#FAF9F6] relative overflow-hidden">
+        {/* Background Sparkles */}
+        <div className="absolute inset-0 pointer-events-none opacity-20">
+            <Sparkles className="absolute top-[15%] left-[10%] text-[#78A2CC] animate-pulse" size={40} />
+            <Sparkles className="absolute bottom-[20%] right-[15%] text-[#FFB7C5] animate-pulse" size={60} style={{ animationDelay: '1s' }} />
         </div>
 
-        {/* Flashcard Container */}
+        <div className="fixed bottom-10 right-10 z-50 pointer-events-none hidden lg:block">
+            <ShibaMascot size="md" message={mascotMessage} className="pointer-events-auto" />
+        </div>
+
+        <div className="w-full max-w-xl flex justify-between items-center mb-8 relative z-10">
+             <div className="px-6 py-2.5 bg-white border border-[#4A4E69]/5 rounded-2xl text-[11px] font-black anime-title tracking-widest shadow-sm flex items-center gap-3">
+                <BarChart3 size={14} className="text-[#78A2CC]" />
+                PROGRESS: {currentIndex + 1} / {sessionItems.length}
+             </div>
+             <button onClick={() => setSessionStarted(false)} className="px-4 py-2.5 bg-[#FFB7C5]/20 text-[#FFB7C5] rounded-2xl text-[10px] font-black anime-title uppercase tracking-widest hover:bg-[#FFB7C5] hover:text-white transition-all">EXIT</button>
+        </div>
+
         <div 
-            className="perspective-1000 w-full max-w-2xl h-[400px] md:h-[500px] cursor-pointer group relative"
+            className="perspective-1000 w-full max-w-xl aspect-[4/3] md:aspect-[5/4] cursor-pointer group mb-10 relative z-10"
             onClick={() => setIsFlipped(!isFlipped)}
         >
             <div className={clsx(
-                "relative w-full h-full duration-700 preserve-3d transition-transform",
+                "relative w-full h-full duration-500 preserve-3d transition-transform",
                 isFlipped ? "rotate-y-180" : ""
             )}>
-                {/* Front */}
-                <div className="absolute top-0 left-0 w-full h-full backface-hidden flex flex-col items-center justify-center p-6 relative bg-white rounded-xl shadow-lg border border-gray-200">
-                     {/* Metadata Badges */}
-                     <div className="absolute top-4 left-4 flex gap-2">
-                        <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-md">#{item.id}</span>
-                        <span className="text-[10px] font-bold text-gray-500 border border-gray-300 px-2 py-0.5 rounded-md">{item.jlpt}</span>
-                        {item.chapter && <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-md border border-gray-200">Ch. {item.chapter}</span>}
+                {/* Front Side */}
+                <div className="absolute top-0 left-0 w-full h-full backface-hidden flex flex-col items-center justify-center p-12 bg-white border border-[#4A4E69]/5 rounded-[40px] shadow-2xl overflow-hidden">
+                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#4A4E69 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
+                     <div className="absolute top-8 left-8 flex gap-3">
+                        <span className="text-[10px] font-black bg-[#78A2CC] text-white px-3 py-1 rounded-full shadow-sm">{item.jlpt}</span>
+                        {item.chapter && <span className="text-[10px] font-black bg-[#FAF9F6] text-[#4A4E69]/40 border border-[#4A4E69]/10 px-3 py-1 rounded-full uppercase tracking-wider">CH.{item.chapter}</span>}
                      </div>
-
-                     <span className={clsx(
-                         "px-3 py-1 rounded-full text-[10px] uppercase font-extrabold tracking-widest mb-4 shadow-sm",
-                         item.type === DataType.VOCAB ? "bg-black text-white" :
-                         item.type === DataType.KANJI ? "bg-[#FFD500] text-black" :
-                         "bg-gray-500 text-white"
-                     )}>
-                        {item.type}
-                     </span>
-                     
-                     <div className="flex-1 flex items-center justify-center w-full">
-                        <h1 className="text-4xl md:text-6xl font-black text-black jp-text text-center text-shadow-sm leading-tight break-all px-4">
-                            {'word' in item ? item.word : 'character' in item ? item.character : item.rule}
+                     <div className="flex flex-col items-center">
+                        <h1 className="text-6xl md:text-8xl font-black text-[#4A4E69] jp-text text-center break-all transition-transform group-hover:scale-110 duration-500">
+                           {'word' in item ? item.word : 'character' in item ? item.character : item.rule}
                         </h1>
                      </div>
-
-                     <p className="mt-auto text-gray-400 text-xs font-medium flex items-center gap-2 animate-pulse">
-                        {STRINGS.review.tapToReveal}
-                     </p>
+                     <div className="absolute bottom-8 flex items-center gap-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                        <TrendingUp size={14} />
+                        <p className="text-[#4A4E69] text-[9px] font-black uppercase tracking-[0.4em]">
+                           [ Tap to Reveal ]
+                        </p>
+                     </div>
                 </div>
 
-                {/* Back */}
-                <div className="absolute top-0 left-0 w-full h-full backface-hidden rotate-y-180 flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-lg border border-gray-200">
-                    <div className="text-center space-y-3 w-full overflow-y-auto custom-scrollbar flex flex-col items-center">
+                {/* Back Side */}
+                <div className="absolute top-0 left-0 w-full h-full backface-hidden rotate-y-180 flex flex-col items-center justify-center p-12 bg-[#78A2CC] border border-[#4A4E69]/10 rounded-[40px] shadow-2xl overflow-hidden">
+                    <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/p6-static.png")' }}></div>
+                    <div className="w-full text-center space-y-8 relative z-10 text-white animate-soft-in">
                         {'reading' in item && (
-                            <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 inline-block">
-                                <p className="text-xl md:text-2xl text-black jp-text font-bold">{item.reading}</p>
+                            <div className="bg-white/10 backdrop-blur-md p-6 rounded-[30px] border border-white/20 inline-block mb-4 shadow-xl">
+                                <p className="text-3xl md:text-5xl font-black jp-text tracking-tighter">{item.reading}</p>
                             </div>
                         )}
-                        {'onyomi' in item && (
-                            <div className="grid grid-cols-2 gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200 text-sm w-full max-w-xs">
-                                <div>
-                                    <div className="text-[10px] font-bold text-[#FFD500] uppercase tracking-wider mb-1">Onyomi</div>
-                                    <div className="text-black font-medium">{item.onyomi}</div>
-                                </div>
-                                <div className="border-l border-gray-300 pl-2">
-                                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Kunyomi</div>
-                                    <div className="text-black font-medium">{item.kunyomi}</div>
-                                </div>
+                        <div className="px-4">
+                            <p className="text-2xl md:text-4xl font-black uppercase tracking-tighter leading-tight drop-shadow-md">
+                                {'meaning' in item ? item.meaning : item.explanation}
+                            </p>
+                        </div>
+                        {item.type === DataType.GRAMMAR && 'examples' in item && (
+                            <div className="pt-4 space-y-2 opacity-80">
+                                {item.examples.slice(0, 1).map((ex: string, i: number) => (
+                                    <p key={i} className="text-xs font-bold jp-text italic">"{ex}"</p>
+                                ))}
                             </div>
                         )}
-                        
-                        <div className="w-8 h-1 bg-[#FFD500] rounded-full mx-auto my-2"></div>
-                        
-                        <p className="text-lg md:text-xl font-bold text-black leading-snug">
-                            {'meaning' in item ? item.meaning : item.explanation}
-                        </p>
-                        
-                        {/* Part of Speech for Vocab */}
-                        {'partOfSpeech' in item && (
-                            <div className="mt-1">
-                                <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded border border-gray-200 uppercase tracking-wide">
-                                    {item.partOfSpeech}
-                                </span>
-                            </div>
-                        )}
-
-                        {/* Conjugations Display */}
-                        {'conjugations' in item && item.conjugations && Object.keys(item.conjugations).length > 0 && (
-                             <div className="mt-3 w-full bg-gray-50 rounded-lg border border-gray-200 p-2">
-                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Conjugations</p>
-                                 <div className="grid grid-cols-2 gap-2 text-sm">
-                                     {Object.entries(item.conjugations).map(([form, value]) => (
-                                         <div key={form} className="text-left bg-white p-1 rounded border border-gray-100">
-                                             <span className="text-[10px] text-gray-400 font-bold capitalize block">{form}</span>
-                                             <span className="text-black jp-text">{value}</span>
-                                         </div>
-                                     ))}
-                                 </div>
-                             </div>
-                        )}
-
-                        {'example' in item && (
-                             <p className="text-gray-600 italic mt-2 bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm w-full">
-                                 "{(item as any).example}"
-                             </p>
-                         )}
-                         {'examples' in item && item.examples && (
-                             <ul className="text-gray-600 italic mt-2 bg-gray-50 p-3 rounded-lg border border-gray-200 text-left list-disc list-inside space-y-1 text-sm w-full">
-                                 {(item as GrammarItem).examples.map((ex, i) => <li key={i}>{ex}</li>)}
-                             </ul>
-                         )}
                     </div>
                 </div>
             </div>
-            
-            {/* Card Shadow/Reflection */}
-            <div className="absolute -bottom-8 left-10 right-10 h-6 bg-black/10 blur-lg rounded-[100%] transition-all duration-500 scale-90 group-hover:scale-75 group-hover:opacity-50"></div>
         </div>
 
-        {/* Controls */}
         <div className={clsx(
-            "mt-8 grid grid-cols-3 gap-3 w-full max-w-lg transition-all duration-500 z-10",
-            isFlipped ? "opacity-100 visible translate-y-0" : "opacity-0 invisible translate-y-4"
+            "grid grid-cols-3 gap-5 w-full max-w-xl transition-all duration-500 relative z-10",
+            isFlipped ? "opacity-100 translate-y-0" : "opacity-0 pointer-events-none translate-y-6"
         )}>
             <button 
+                disabled={isTransitioning}
                 onClick={(e) => { e.stopPropagation(); handleResult(ReviewResult.FORGOT); }}
-                className="group flex flex-col items-center justify-center py-2 bg-white hover:bg-red-500 text-gray-400 hover:text-white rounded-xl shadow-md hover:shadow-red-200 transition-all active:scale-95 border border-gray-200"
+                className="group p-6 bg-white border border-[#4A4E69]/5 rounded-[30px] shadow-xl hover:bg-[#FFB7C5]/10 transition-all flex flex-col items-center gap-3 active:translate-y-1"
             >
-                <ThemedIcon iconKey="actionClose" Fallback={X} className="w-5 h-5 mb-1 transition-transform group-hover:scale-110" />
-                <span className="font-extrabold text-[10px] uppercase tracking-wide text-gray-600 group-hover:text-white">{STRINGS.review.buttons.forgot}</span>
+                <div className="p-4 bg-[#FFB7C5]/10 text-[#FFB7C5] rounded-2xl group-hover:scale-110 transition-transform"><X size={24} /></div>
+                <span className="font-black anime-title text-[9px] uppercase tracking-[0.2em] text-[#4A4E69]/40">Forgot [1]</span>
             </button>
             <button 
+                disabled={isTransitioning}
                 onClick={(e) => { e.stopPropagation(); handleResult(ReviewResult.HARD); }}
-                 className="group flex flex-col items-center justify-center py-2 bg-white hover:bg-[#FFD500] text-gray-400 hover:text-black rounded-xl shadow-md hover:shadow-yellow-200 transition-all active:scale-95 border border-gray-200"
+                className="group p-6 bg-white border border-[#4A4E69]/5 rounded-[30px] shadow-xl hover:bg-[#78A2CC]/10 transition-all flex flex-col items-center gap-3 active:translate-y-1"
             >
-                <ThemedIcon iconKey="actionRefresh" Fallback={RefreshCw} className="w-5 h-5 mb-1 transition-transform group-hover:scale-110" />
-                <span className="font-extrabold text-[10px] uppercase tracking-wide text-gray-600 group-hover:text-black">{STRINGS.review.buttons.hard}</span>
+                <div className="p-4 bg-[#78A2CC]/10 text-[#78A2CC] rounded-2xl group-hover:rotate-45 transition-transform"><RefreshCw size={24} /></div>
+                <span className="font-black anime-title text-[9px] uppercase tracking-[0.2em] text-[#4A4E69]/40">Hard [2]</span>
             </button>
             <button 
+                disabled={isTransitioning}
                 onClick={(e) => { e.stopPropagation(); handleResult(ReviewResult.EASY); }}
-                 className="group flex flex-col items-center justify-center py-2 bg-white hover:bg-green-500 text-gray-400 hover:text-white rounded-xl shadow-md hover:shadow-green-200 transition-all active:scale-95 border border-gray-200"
+                className="group p-6 bg-white border border-[#4A4E69]/5 rounded-[30px] shadow-xl hover:bg-[#B4E4C3]/10 transition-all flex flex-col items-center gap-3 active:translate-y-1"
             >
-                <ThemedIcon iconKey="actionCheck" Fallback={Check} className="w-5 h-5 mb-1 transition-transform group-hover:scale-110" />
-                <span className="font-extrabold text-[10px] uppercase tracking-wide text-gray-600 group-hover:text-white">{STRINGS.review.buttons.easy}</span>
+                <div className="p-4 bg-[#B4E4C3]/20 text-[#B4E4C3] rounded-2xl group-hover:scale-110 transition-transform"><Check size={24} /></div>
+                <span className="font-black anime-title text-[9px] uppercase tracking-[0.2em] text-[#4A4E69]/40">Master [3]</span>
             </button>
         </div>
     </div>

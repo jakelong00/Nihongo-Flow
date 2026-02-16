@@ -3,88 +3,131 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nihongo Flow</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Nihongo Flow - Retro Dojo</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=M+PLUS+Rounded+1c:wght@400;700;900&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --bg: #FAF9F6;
+        --primary: #78A2CC;
+        --secondary: #B4E4C3;
+        --accent: #FFB7C5;
+        --text: #4A4E69;
+        --soft-shadow: 0 4px 12px -2px rgba(74, 78, 105, 0.1);
+      }
+      html, body {
+        height: 100% !important;
+        width: 100% !important;
+        margin: 0;
+        padding: 0;
+        overflow: hidden !important;
+        position: fixed;
+      }
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #F4F5F7; /* Urban Light Gray */
-        color: #222222; /* High Contrast Black */
+        background-color: var(--bg);
+        color: var(--text);
+        background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+        -webkit-font-smoothing: antialiased;
+      }
+      #root {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+      }
+      .anime-title {
+        font-family: 'M PLUS Rounded 1c', sans-serif;
+        letter-spacing: -0.01em;
       }
       .jp-text {
         font-family: 'Noto Sans JP', sans-serif;
       }
+      .grain-overlay {
+        pointer-events: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-image: url("https://www.transparenttextures.com/patterns/p6-static.png");
+        opacity: 0.1;
+        z-index: 1000;
+      }
       
-      /* 3D Transform Utilities for Flashcards */
-      .perspective-1000 {
-        perspective: 1000px;
+      @keyframes soft-fade-in {
+        from { opacity: 0; transform: translateY(12px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
       }
-      .preserve-3d {
-        transform-style: preserve-3d;
+      .animate-soft-in { animation: soft-fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+      @keyframes floating {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
       }
-      .backface-hidden {
-        backface-visibility: hidden;
-        -webkit-backface-visibility: hidden;
+      .animate-float { animation: floating 4s ease-in-out infinite; }
+
+      @keyframes wiggle {
+        0%, 100% { transform: rotate(-1deg); }
+        50% { transform: rotate(1deg); }
       }
-      .rotate-y-180 {
-        transform: rotateY(180deg);
+      .animate-wiggle { animation: wiggle 3s ease-in-out infinite; }
+
+      @keyframes petal-fall {
+        0% { transform: translate(0, -10%) rotate(0deg); opacity: 0; }
+        10% { opacity: 0.6; }
+        90% { opacity: 0.6; }
+        100% { transform: translate(100px, 110vh) rotate(360deg); opacity: 0; }
+      }
+      .petal {
+        position: fixed;
+        background-color: var(--accent);
+        border-radius: 100% 0 100% 0;
+        opacity: 0.4;
+        z-index: 0;
+        pointer-events: none;
+        animation: petal-fall linear infinite;
       }
 
-      /* Transitions & Animations */
-      .animate-slide-up {
-        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(74, 78, 105, 0.2) transparent;
+        -webkit-overflow-scrolling: touch;
       }
-      .animate-scale-in {
-        animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-
-      @keyframes slideUp {
-        from { transform: translateY(100%); }
-        to { transform: translateY(0); }
-      }
-      @keyframes scaleIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
-      }
-
-      /* Custom Scrollbar */
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #E5E7EB;
+      .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { 
+        background: rgba(74, 78, 105, 0.2); 
         border-radius: 10px;
       }
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #D1D5DB;
-      }
 
-      .text-shadow-sm {
-        text-shadow: 0 1px 1px rgba(0,0,0,0.05);
-      }
+      /* 3D Flashcard styles */
+      .perspective-1000 { perspective: 1000px; }
+      .preserve-3d { transform-style: preserve-3d; }
+      .backface-hidden { backface-visibility: hidden; }
+      .rotate-y-180 { transform: rotateY(180deg); }
     </style>
-  <script type="importmap">
+    <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
-    "recharts": "https://esm.sh/recharts@^3.7.0",
-    "clsx": "https://esm.sh/clsx@^2.1.1",
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react/": "https://esm.sh/react@18.2.0/",
+    "react-dom/": "https://esm.sh/react-dom@18.2.0/",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?external=react,react-dom",
+    "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react,react-dom",
+    "recharts": "https://esm.sh/recharts@2.12.2?external=react,react-dom",
+    "clsx": "https://esm.sh/clsx@2.1.1",
+    "@google/genai": "https://esm.sh/@google/genai@1.41.0",
     "vite": "https://esm.sh/vite@^7.3.1",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4"
   }
 }
 </script>
-</head>
-  <body class="bg-[#F4F5F7] text-[#222222] antialiased overflow-hidden">
+  </head>
+  <body>
+    <div class="grain-overlay"></div>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

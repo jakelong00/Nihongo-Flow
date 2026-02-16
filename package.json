@@ -1,3 +1,4 @@
+
 {
   "name": "nihongo-flow",
   "private": true,
@@ -11,10 +12,11 @@
   "dependencies": {
     "clsx": "^2.1.1",
     "lucide-react": "^0.344.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
     "react-router-dom": "^6.22.3",
-    "recharts": "^2.12.2"
+    "recharts": "^2.12.2",
+    "@google/genai": "^1.41.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.64",

@@ -1,9 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, FolderOpen, GraduationCap, LayoutDashboard, Settings, Languages, BrainCircuit, Database, Leaf, Menu, X, HelpCircle } from 'lucide-react';
+import { BookOpen, GraduationCap, LayoutDashboard, Settings, Languages, BrainCircuit, Database, Ghost, Menu, X, HelpCircle, Sparkle } from 'lucide-react';
 import { useFileSystem } from '../contexts/FileSystemContext';
-import { STRINGS } from '../constants/strings';
 import { ThemedIcon } from './ThemedIcon';
 import clsx from 'clsx';
 
@@ -21,120 +20,119 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   }, [isReady, location.pathname, navigate]);
 
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location.pathname]);
-
   const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, key: 'navDashboard' },
-    { name: 'Learn', path: '/learn', icon: BrainCircuit, key: 'navLearn' },
-    { name: 'Vocabulary', path: '/vocab', icon: BookOpen, key: 'navVocab' },
-    { name: 'Kanji', path: '/kanji', icon: Languages, key: 'navKanji' },
-    { name: 'Grammar', path: '/grammar', icon: GraduationCap, key: 'navGrammar' },
-    { name: 'About', path: '/about', icon: HelpCircle, key: 'navAbout' },
-    { name: 'Settings', path: '/settings', icon: Settings, key: 'navSettings' },
+    { name: 'DASHBOARD', path: '/dashboard', icon: LayoutDashboard, key: 'navDashboard' },
+    { name: 'STUDY SESSION', path: '/learn', icon: BrainCircuit, key: 'navLearn' },
+    { name: 'VOCABULARY', path: '/vocab', icon: BookOpen, key: 'navVocab' },
+    { name: 'KANJI DOJO', path: '/kanji', icon: Languages, key: 'navKanji' },
+    { name: 'GRAMMAR', path: '/grammar', icon: GraduationCap, key: 'navGrammar' },
+    { name: 'USER GUIDE', path: '/about', icon: HelpCircle, key: 'navAbout' },
+    { name: 'SYSTEM SETTINGS', path: '/settings', icon: Settings, key: 'navSettings' },
   ];
 
+  // Zen decorative petals
+  const petals = useMemo(() => Array.from({ length: 12 }).map((_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    delay: `${Math.random() * 15}s`,
+    duration: `${15 + Math.random() * 10}s`,
+    size: `${8 + Math.random() * 8}px`,
+  })), []);
+
   const SidebarContent = () => (
-    <>
-      <div className="p-4 md:p-6 flex-shrink-0 border-b border-gray-100">
-        <h1 className="text-xl md:text-2xl font-extrabold flex items-center gap-2 tracking-tight text-black">
-          <div className="p-1.5 bg-[#FFD500] rounded-lg text-black">
-             <ThemedIcon iconKey="appLogo" Fallback={Leaf} size={20} className="text-black" />
+    <div className="flex flex-col h-full bg-[#FAF9F6]">
+      <div className="p-7 flex-shrink-0 bg-[#78A2CC] text-white">
+        <h1 className="text-xl font-black flex items-center gap-3 anime-title">
+          <div className="p-1.5 bg-white/20 rounded-lg animate-wiggle">
+             <ThemedIcon iconKey="appLogo" Fallback={Sparkle} size={20} className="text-white" />
           </div>
-          <span>{STRINGS.common.appName}</span>
+          <span className="tracking-tighter uppercase">Nihongo Flow</span>
         </h1>
-        <p className="text-[10px] text-gray-500 mt-1 font-bold tracking-wide uppercase opacity-80 ml-1">
-          {STRINGS.common.appSubtitle}
-        </p>
+        <p className="text-[10px] font-black opacity-60 mt-0.5 uppercase tracking-[0.3em]">Learning Engine</p>
       </div>
       
-      <nav className="flex-1 px-3 space-y-1 md:space-y-2 mt-4 overflow-y-auto">
+      <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={() => setIsMobileMenuOpen(false)}
             className={({ isActive }) =>
               clsx(
-                "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group font-bold",
+                "flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group text-[11px] font-black anime-title uppercase tracking-widest",
                 isActive
-                  ? 'bg-[#FFD500] text-black shadow-sm'
-                  : 'text-gray-500 hover:bg-gray-100 hover:text-black'
+                  ? 'bg-[#FFB7C5] text-[#4A4E69] shadow-md scale-105'
+                  : 'text-[#4A4E69]/50 hover:text-[#4A4E69] hover:bg-[#78A2CC]/5'
               )
             }
           >
-            <ThemedIcon iconKey={item.key} Fallback={item.icon} size={20} className={clsx("transition-transform group-hover:scale-110 flex-shrink-0", ({ isActive }: any) => isActive ? "text-black" : "text-gray-400 group-hover:text-black")} />
-            <span className="tracking-wide text-sm">{item.name}</span>
+            <ThemedIcon iconKey={item.key} Fallback={item.icon} size={18} className={clsx("transition-transform group-hover:rotate-12")} />
+            <span>{item.name}</span>
           </NavLink>
         ))}
       </nav>
       
-      <div className="p-4 mt-auto flex-shrink-0">
-        <div className="bg-gray-100 rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center gap-2 text-xs text-gray-600 font-bold">
-            {isLocalMode ? 
-                <ThemedIcon iconKey="homeStorageLocal" Fallback={Database} size={16} className="text-[#FFD500] flex-shrink-0" /> : 
-                <ThemedIcon iconKey="homeStorageLocal" Fallback={FolderOpen} size={16} className="text-[#FFD500] flex-shrink-0" />
-            }
-            <span className="truncate opacity-90">{dirHandle ? dirHandle.name : STRINGS.home.localStorageBadge}</span>
-          </div>
+      <div className="p-5 border-t border-[#4A4E69]/5 bg-white/40">
+        <div className="p-3 bg-white rounded-2xl border border-[#4A4E69]/5 shadow-sm flex items-center gap-3">
+            <div className="p-2 bg-[#B4E4C3]/20 text-[#B4E4C3] rounded-xl">
+                <Database size={14} className="animate-pulse" />
+            </div>
+            <div className="overflow-hidden">
+                <div className="text-[9px] font-black text-[#4A4E69]/30 uppercase leading-none mb-0.5">Sync</div>
+                <div className="text-[10px] font-black text-[#4A4E69] truncate uppercase">{dirHandle ? dirHandle.name : "Local"}</div>
+            </div>
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
-    <div className="flex h-screen bg-[#F4F5F7] overflow-hidden">
-      
-      {/* Mobile/Tablet Header (Visible up to LG) */}
+    <div className="flex h-full w-full bg-[#FAF9F6] overflow-hidden text-[#4A4E69] relative">
+      {/* Animated Zen Background elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-10">
+          <span className="absolute top-[20%] left-[10%] text-9xl font-black jp-text animate-float select-none">学</span>
+          <span className="absolute bottom-[20%] right-[10%] text-9xl font-black jp-text animate-float select-none" style={{ animationDelay: '1s' }}>心</span>
+          <span className="absolute top-[10%] right-[30%] text-8xl font-black jp-text animate-float select-none" style={{ animationDelay: '2s' }}>力</span>
+          {petals.map(p => (
+            <div key={p.id} className="petal" style={{ left: p.left, animationDelay: p.delay, animationDuration: p.duration, width: p.size, height: p.size }}></div>
+          ))}
+      </div>
+
       {isReady && (
-        <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white z-40 flex items-center justify-between px-4 shadow-sm border-b border-gray-200">
-           <div className="flex items-center gap-2 text-black font-extrabold">
-              <div className="p-1 bg-[#FFD500] rounded-md text-black">
-                <ThemedIcon iconKey="appLogo" Fallback={Leaf} size={18} className="text-black" />
+        <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#78A2CC] text-white z-[70] flex items-center justify-between px-6 shadow-lg">
+           <div className="flex items-center gap-3 font-black anime-title">
+              <div className="p-1.5 bg-white/20 rounded-lg flex items-center justify-center">
+                <ThemedIcon iconKey="appLogo" Fallback={Sparkle} size={18} className="text-white" />
               </div>
-              <span className="text-lg">{STRINGS.common.appName}</span>
+              <span className="tracking-tighter uppercase text-base">NIHONGO FLOW</span>
            </div>
-           <button 
-             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-             className="text-black p-2 rounded-lg hover:bg-gray-100 transition-colors"
-           >
-             {isMobileMenuOpen ? 
-                <ThemedIcon iconKey="actionClose" Fallback={X} size={24} /> : 
-                <ThemedIcon iconKey="actionMenu" Fallback={Menu} size={24} />
-             }
+           <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-white/20 rounded-xl active:scale-95 transition-transform">
+             {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
            </button>
         </header>
       )}
 
-      {/* Sidebar Overlay (Visible up to LG) */}
-      {isReady && isMobileMenuOpen && (
-        <div className="fixed inset-0 z-30 bg-black/50 lg:hidden backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
-      )}
-
-      {/* Sidebar Drawer (Visible up to LG) */}
       {isReady && (
-        <aside 
-          className={clsx(
-            "fixed inset-y-0 left-0 w-64 bg-white text-black z-40 flex flex-col shadow-2xl transition-transform duration-300 lg:hidden",
-            isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-          )}
-        >
+        <aside className={clsx(
+          "fixed inset-y-0 left-0 w-64 bg-white z-[80] shadow-2xl transition-transform duration-500 lg:static lg:translate-x-0 lg:shadow-none border-r border-[#4A4E69]/5 shrink-0 h-full",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        )}>
           <SidebarContent />
         </aside>
       )}
 
-      {/* Desktop Sidebar (Visible LG+) */}
-      {isReady && (
-        <aside className="hidden lg:flex w-64 bg-white text-black flex-shrink-0 flex-col border-r border-gray-200 shadow-sm z-20">
-          <SidebarContent />
-        </aside>
+      {isMobileMenuOpen && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[75] lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
       )}
 
-      {/* Main Content */}
-      <main className={clsx("flex-1 overflow-auto relative z-10 scroll-smooth", isReady && "mt-14 lg:mt-0")}>
-        {children}
+      {/* Main Content: Ensure it fills the height and allows scrolling */}
+      <main className={clsx(
+        "flex-1 relative flex flex-col h-full overflow-hidden z-10", 
+        isReady && "pt-16 lg:pt-0"
+      )}>
+        <div className="flex-1 w-full overflow-y-auto custom-scrollbar">
+          {children}
+        </div>
       </main>
     </div>
   );
