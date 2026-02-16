@@ -19,23 +19,19 @@ const Kanji: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [filterLevel, setFilterLevel] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [sortBy, setSortBy] = useState<'id' | 'mastery_asc' | 'mastery_desc' | 'strokes'>('id');
+  const [formData, setFormData] = useState<Omit<KanjiItem, 'id'>>(EMPTY_FORM);
 
   const [showFAB, setShowFAB] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [filterLevel, setFilterLevel] = useState('All');
-  const [filterStatus, setFilterStatus] = useState('All');
-  const [sortBy, setSortBy] = useState<'id' | 'mastery_asc' | 'mastery_desc' | 'strokes'>('id');
-
-  const [formData, setFormData] = useState<Omit<KanjiItem, 'id'>>(EMPTY_FORM);
-
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        setShowFAB(!entry.isIntersecting);
-      },
+      ([entry]) => setShowFAB(!entry.isIntersecting),
       { threshold: 0 }
     );
     if (sentinelRef.current) observer.observe(sentinelRef.current);
@@ -57,6 +53,12 @@ const Kanji: React.FC = () => {
     }
   };
 
+  const handleMarkMastered = async () => {
+      if (!editingId) return;
+      await logReview(DataType.KANJI, editingId, ReviewResult.MASTERED);
+      setIsFormOpen(false);
+  };
+
   const toggleSelection = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     setSelectedIds(prev => {
@@ -76,19 +78,6 @@ const Kanji: React.FC = () => {
     setEditingId(null);
   };
 
-  const scrollToFilters = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setIsExpanded(false);
-    setTimeout(() => searchInputRef.current?.focus(), 500);
-  };
-
-  const handleOpenAdd = () => {
-    setEditingId(null);
-    setFormData(EMPTY_FORM);
-    setIsFormOpen(true);
-    setIsExpanded(false);
-  };
-
   const filteredData = useMemo(() => {
     let data = kanjiData.filter(k => {
         const matchSearch = fuzzySearch(searchTerm, k.character, k.meaning, k.onyomi, k.kunyomi);
@@ -104,6 +93,19 @@ const Kanji: React.FC = () => {
     });
   }, [kanjiData, searchTerm, filterLevel, filterStatus, sortBy, getMasteryPercentage, getLearningStage]);
 
+  const scrollToFilters = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsExpanded(false);
+    setTimeout(() => searchInputRef.current?.focus(), 500);
+  };
+
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setFormData(EMPTY_FORM);
+    setIsFormOpen(true);
+    setIsExpanded(false);
+  };
+
   const getStatusColor = (id: string) => {
       const stage = getLearningStage(DataType.KANJI, id);
       switch (stage) {
@@ -118,15 +120,12 @@ const Kanji: React.FC = () => {
     <div className="p-7 md:p-11 pt-20 md:pt-24 max-w-7xl mx-auto space-y-9 animate-soft-in">
       <div ref={sentinelRef} className="absolute top-0 left-0 w-full h-1 pointer-events-none" />
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-[#4A4E69]/5 pb-8">
         <div className="flex items-center gap-6">
           <ShibaMascot size="sm" message={STRINGS.mascot.kanji} />
           <div>
             <h2 className="text-2xl font-black text-[#4A4E69] anime-title flex items-center gap-4">
-                <div className="p-2 bg-[#FFB7C5]/10 rounded-xl text-[#FFB7C5]">
-                  <Languages size={24} />
-                </div>
+                <div className="p-2 bg-[#FFB7C5]/10 rounded-xl text-[#FFB7C5]"><Languages size={24} /></div>
                 {STRINGS.kanji.title}
             </h2>
             <p className="text-[10px] font-black text-[#4A4E69]/30 uppercase tracking-[0.45em] mt-3">{STRINGS.kanji.subtitle}</p>
@@ -139,16 +138,12 @@ const Kanji: React.FC = () => {
                 {STRINGS.common.delete} ({selectedIds.size})
             </button>
           )}
-          <button 
-            onClick={handleOpenAdd} 
-            className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl font-black anime-title text-[11px] tracking-[0.15em] transition-all bg-[#FFB7C5] text-white border-b-4 border-[#e091a1]"
-          >
+          <button onClick={handleOpenAdd} className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl font-black anime-title text-[11px] tracking-[0.15em] transition-all bg-[#FFB7C5] text-white border-b-4 border-[#e091a1]">
             <Plus size={16} className="mr-2 inline"/> {STRINGS.kanji.addBtn}
           </button>
         </div>
       </div>
 
-      {/* Edit Modal Popup */}
       {isFormOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-[#4A4E69]/60 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setIsFormOpen(false)} />
@@ -196,7 +191,7 @@ const Kanji: React.FC = () => {
 
               {editingId && (
                 <div className="grid grid-cols-2 gap-4">
-                  <button type="button" onClick={() => logReview(DataType.KANJI, editingId, ReviewResult.MASTERED)} className="flex items-center justify-center gap-2 py-3 bg-[#B4E4C3]/10 text-[#4A4E69] border border-[#B4E4C3]/30 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-[#B4E4C3] hover:text-white transition-all">
+                  <button type="button" onClick={handleMarkMastered} className="flex items-center justify-center gap-2 py-3 bg-[#B4E4C3]/10 text-[#4A4E69] border border-[#B4E4C3]/30 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-[#B4E4C3] hover:text-white transition-all">
                     <Trophy size={14} /> Mark Mastered
                   </button>
                   <button type="button" onClick={handleResetProgress} className="flex items-center justify-center gap-2 py-3 bg-[#FFB7C5]/10 text-[#FFB7C5] border border-[#FFB7C5]/30 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-[#FFB7C5] hover:text-white transition-all">
@@ -213,12 +208,9 @@ const Kanji: React.FC = () => {
         </div>
       )}
 
-      {/* Toolbar */}
       <div className="space-y-6">
         <div className="relative group">
-            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-[#4A4E69]/20 group-focus-within:text-[#FFB7C5] transition-colors">
-                <Search size={20} />
-            </div>
+            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-[#4A4E69]/20 group-focus-within:text-[#FFB7C5] transition-colors"><Search size={20} /></div>
             <input ref={searchInputRef} className="w-full pl-14 pr-8 py-5 bg-white border border-[#4A4E69]/10 rounded-2xl outline-none shadow-sm focus:shadow-xl focus:border-[#FFB7C5]/20 transition-all font-bold text-lg" placeholder={STRINGS.common.searchPlaceholder} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
 
@@ -234,7 +226,6 @@ const Kanji: React.FC = () => {
                      </select>
                  </div>
              ))}
-
              <div className="ml-auto bg-white border border-[#4A4E69]/5 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm">
                  <ArrowUpDown size={14} className="text-[#4A4E69]/20" />
                  <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="bg-transparent outline-none font-black text-[#4A4E69] text-[10px]">
@@ -246,68 +237,42 @@ const Kanji: React.FC = () => {
         </div>
       </div>
 
-      {/* Kanji Grid Optimized */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-10">
         {filteredData.length > 0 ? filteredData.map(k => {
             const mastery = getMasteryPercentage(DataType.KANJI, k.id);
             const isSelected = selectedIds.has(k.id);
             return (
             <div key={k.id} className={clsx("relative group bg-white rounded-[40px] border transition-all shadow-sm hover:shadow-2xl hover:-translate-y-2 flex flex-col p-8", isSelected ? "border-[#FFB7C5] bg-[#FFB7C5]/5 ring-2 ring-[#FFB7C5]/20" : "border-[#4A4E69]/5")}>
-                {/* Checkbox */}
                 <button onClick={(e) => toggleSelection(e, k.id)} className={clsx("absolute top-6 left-6 p-2 rounded-xl transition-all shadow-sm z-20", isSelected ? "bg-[#FFB7C5] text-white" : "bg-[#FAF9F6] text-[#4A4E69]/10 group-hover:text-[#FFB7C5]")}>
                      {isSelected ? <Check size={16} /> : <div className="w-4 h-4 rounded-md border-2 border-current" />}
                 </button>
-
-                {/* JLPT Tag */}
-                <div className="absolute top-6 right-6 text-[10px] bg-[#FAF9F6] text-[#4A4E69]/40 px-3 py-1.5 rounded-full font-black border border-[#4A4E69]/5 shadow-sm">
-                    {k.jlpt}
-                </div>
-
-                {/* Character Section */}
+                <div className="absolute top-6 right-6 text-[10px] bg-[#FAF9F6] text-[#4A4E69]/40 px-3 py-1.5 rounded-full font-black border border-[#4A4E69]/5 shadow-sm">{k.jlpt}</div>
                 <div className="flex flex-col items-center mt-6 mb-6">
-                    <div className="text-7xl font-black text-[#4A4E69] jp-text mb-4 group-hover:scale-110 transition-transform duration-500 drop-shadow-sm">
-                        {k.character}
-                    </div>
-                    <div className="text-sm font-black text-[#4A4E69] uppercase tracking-wider text-center line-clamp-1 h-5">
-                        {k.meaning}
-                    </div>
+                    <div className="text-7xl font-black text-[#4A4E69] jp-text mb-4 group-hover:scale-110 transition-transform duration-500 drop-shadow-sm">{k.character}</div>
+                    <div className="text-sm font-black text-[#4A4E69] uppercase tracking-wider text-center line-clamp-1 h-5">{k.meaning}</div>
                 </div>
-
-                {/* Readings Box */}
                 <div className="bg-[#FAF9F6] rounded-[24px] p-4 space-y-3 mb-6 flex-1 border border-[#4A4E69]/5">
                     <div className="space-y-1">
                         <div className="text-[8px] font-black text-[#4A4E69]/20 uppercase tracking-widest">On-yomi</div>
-                        <div className="text-[11px] font-bold text-[#4A4E69] jp-text break-words">
-                            {k.onyomi || '—'}
-                        </div>
+                        <div className="text-[11px] font-bold text-[#4A4E69] jp-text break-words">{k.onyomi || '—'}</div>
                     </div>
                     <div className="w-full h-px bg-[#4A4E69]/5" />
                     <div className="space-y-1">
                         <div className="text-[8px] font-black text-[#4A4E69]/20 uppercase tracking-widest">Kun-yomi</div>
-                        <div className="text-[11px] font-bold text-[#4A4E69] jp-text break-words">
-                            {k.kunyomi || '—'}
-                        </div>
+                        <div className="text-[11px] font-bold text-[#4A4E69] jp-text break-words">{k.kunyomi || '—'}</div>
                     </div>
                 </div>
-                
-                {/* Mastery Bar */}
                 <div className="w-full mt-auto">
                     <div className="flex justify-between items-center mb-2 px-1">
-                        <span className={clsx("text-[9px] font-black uppercase tracking-widest", getStatusColor(k.id).split(' ')[0])}>
-                            {mastery >= 100 ? 'Mastered' : 'Learned'}
-                        </span>
+                        <span className={clsx("text-[9px] font-black uppercase tracking-widest", getStatusColor(k.id).split(' ')[0])}>{mastery >= 100 ? 'Mastered' : 'Learned'}</span>
                         <span className="text-[9px] font-black text-[#4A4E69]/20">{mastery}%</span>
                     </div>
-                    <div className="w-full h-2 bg-[#FAF9F6] rounded-full overflow-hidden shadow-inner border border-[#4A4E69]/5">
-                        <div className="h-full bg-[#B4E4C3] transition-all duration-1000" style={{ width: `${mastery}%` }}></div>
-                    </div>
+                    <div className="w-full h-2 bg-[#FAF9F6] rounded-full overflow-hidden shadow-inner border border-[#4A4E69]/5"><div className="h-full bg-[#B4E4C3] transition-all duration-1000" style={{ width: `${mastery}%` }}></div></div>
                 </div>
-
-                {/* Hover Actions */}
                 <div className="absolute inset-0 bg-white/95 p-8 flex flex-col items-center justify-center gap-4 opacity-0 group-hover:opacity-100 transition-all rounded-[40px] z-30 backdrop-blur-md">
                     <button onClick={(e) => { e.stopPropagation(); logReview(DataType.KANJI, k.id, ReviewResult.MASTERED); }} className="w-full py-4 bg-[#B4E4C3]/10 text-[#4A4E69] rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#B4E4C3] hover:text-white transition-all shadow-md">Master Scroll</button>
                     <div className="grid grid-cols-2 gap-3 w-full">
-                        <button onClick={(e) => { handleEdit(e, k); }} className="py-4 bg-[#FAF9F6] text-[#4A4E69] rounded-[20px] text-[10px] font-black uppercase tracking-widest hover:bg-[#78A2CC] hover:text-white transition-all shadow-sm">Edit</button>
+                        <button onClick={(e) => handleEdit(e, k)} className="py-4 bg-[#FAF9F6] text-[#4A4E69] rounded-[20px] text-[10px] font-black uppercase tracking-widest hover:bg-[#78A2CC] hover:text-white transition-all shadow-sm">Edit</button>
                         <button onClick={(e) => { e.stopPropagation(); if(window.confirm(STRINGS.common.confirmDelete)) deleteKanji([k.id]); }} className="py-4 bg-[#FFB7C5]/10 text-[#FFB7C5] rounded-[20px] text-[10px] font-black uppercase tracking-widest hover:bg-[#FFB7C5] hover:text-white transition-all shadow-sm">Discard</button>
                     </div>
                 </div>
@@ -320,10 +285,7 @@ const Kanji: React.FC = () => {
         )}
       </div>
 
-      <div className={clsx(
-        "fixed bottom-8 right-8 z-[150] flex flex-col items-end gap-4 transition-all duration-300 transform",
-        showFAB ? "scale-100 opacity-100" : "scale-0 opacity-0 pointer-events-none"
-      )}>
+      <div className={clsx("fixed bottom-8 right-8 z-[150] flex flex-col items-end gap-4 transition-all duration-300 transform", showFAB ? "scale-100 opacity-100" : "scale-0 opacity-0 pointer-events-none")}>
         <div className={clsx("flex flex-col items-end gap-3 transition-all", isExpanded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none")}>
           <button onClick={scrollToFilters} className="w-12 h-12 bg-white text-[#78A2CC] rounded-full flex items-center justify-center border border-[#4A4E69]/5 hover:bg-[#78A2CC] hover:text-white transition-all"><Search size={20}/></button>
           <button onClick={handleOpenAdd} className="w-12 h-12 bg-white text-[#FFB7C5] rounded-full flex items-center justify-center border border-[#4A4E69]/5 hover:bg-[#FFB7C5] hover:text-white transition-all"><Plus size={20}/></button>
@@ -332,7 +294,6 @@ const Kanji: React.FC = () => {
             {isExpanded ? <X size={28}/> : <Plus size={28}/>}
         </button>
       </div>
-
       <div className="h-10"></div>
     </div>
   );

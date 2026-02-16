@@ -71,7 +71,14 @@ export const parseCSV = <T>(csvText: string): T[] => {
 
 export const toCSV = <T extends object>(data: T[]): string => {
   if (data.length === 0) return '';
-  const headers = Object.keys(data[0]);
+  
+  // Dynamically collect all keys from all objects to ensure no data loss
+  const allKeys = new Set<string>();
+  data.forEach(item => {
+    Object.keys(item).forEach(key => allKeys.add(key));
+  });
+  const headers = Array.from(allKeys);
+
   const csvRows = [
     headers.join(','), // header row
     ...data.map(row => {

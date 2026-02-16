@@ -1,7 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
-// Added ArrowUpDown to imports
 import { Plus, Search, Trash2, Edit2, Check, X, RotateCcw, GraduationCap, Sparkles, Trophy, ArrowUpDown } from 'lucide-react';
 import { DataType, GrammarItem, LearningStage, ReviewResult } from '../types';
 import { STRINGS } from '../constants/strings';
@@ -19,22 +18,19 @@ const Grammar: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterLevel, setFilterLevel] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [sortBy, setSortBy] = useState<'id' | 'mastery_asc' | 'mastery_desc'>('id');
+  const [formData, setFormData] = useState<Omit<GrammarItem, 'id'>>(EMPTY_FORM);
 
   const [showFAB, setShowFAB] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [filterLevel, setFilterLevel] = useState('All');
-  const [sortBy, setSortBy] = useState<'id' | 'mastery_asc' | 'mastery_desc'>('id');
-
-  const [formData, setFormData] = useState<Omit<GrammarItem, 'id'>>(EMPTY_FORM);
-
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        setShowFAB(!entry.isIntersecting);
-      },
+      ([entry]) => setShowFAB(!entry.isIntersecting),
       { threshold: 0 }
     );
     if (sentinelRef.current) observer.observe(sentinelRef.current);
@@ -72,6 +68,20 @@ const Grammar: React.FC = () => {
     setEditingId(null);
   };
 
+  const filteredData = useMemo(() => {
+    let data = grammarData.filter(g => {
+        const matchSearch = fuzzySearch(searchTerm, g.rule, g.explanation);
+        const matchLevel = filterLevel === 'All' || g.jlpt === filterLevel;
+        const matchStatus = filterStatus === 'All' || getLearningStage(DataType.GRAMMAR, g.id) === filterStatus;
+        return matchSearch && matchLevel && matchStatus;
+    });
+    return data.sort((a, b) => {
+        if (sortBy === 'mastery_asc') return getMasteryPercentage(DataType.GRAMMAR, a.id) - getMasteryPercentage(DataType.GRAMMAR, b.id);
+        if (sortBy === 'mastery_desc') return getMasteryPercentage(DataType.GRAMMAR, b.id) - getMasteryPercentage(DataType.GRAMMAR, a.id);
+        return parseInt(b.id) - parseInt(a.id);
+    });
+  }, [grammarData, searchTerm, filterLevel, filterStatus, sortBy, getMasteryPercentage, getLearningStage]);
+
   const scrollToFilters = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setIsExpanded(false);
@@ -85,35 +95,22 @@ const Grammar: React.FC = () => {
     setIsExpanded(false);
   };
 
-  const filteredData = useMemo(() => {
-    let data = grammarData.filter(g => {
-        const matchSearch = fuzzySearch(searchTerm, g.rule, g.explanation);
-        const matchLevel = filterLevel === 'All' || g.jlpt === filterLevel;
-        const matchStatus = filterStatus === 'All' || getLearningStage(DataType.GRAMMAR, g.id) === filterStatus;
-        return matchSearch && matchLevel && matchStatus;
-    });
-    return data.sort((a, b) => {
-        if (sortBy === 'mastery_asc') return getMasteryPercentage(DataType.GRAMMAR, a.id) - getMasteryPercentage(DataType.GRAMMAR, b.id);
-        if (sortBy === 'mastery_desc') return getMasteryPercentage(DataType.GRAMMAR, b.id) - getMasteryPercentage(DataType.GRAMMAR, a.id);
-        return parseInt(b.id) - parseInt(a.id);
-    });
-  }, [grammarData, searchTerm, filterLevel, sortBy, getMasteryPercentage, getLearningStage]);
-
-  const [filterStatus, setFilterStatus] = useState('All');
+  const handleMarkMastered = async () => {
+      if (!editingId) return;
+      await logReview(DataType.GRAMMAR, editingId, ReviewResult.MASTERED);
+      setIsFormOpen(false);
+  };
 
   return (
     <div className="p-7 md:p-11 pt-20 md:pt-24 max-w-7xl mx-auto space-y-9 animate-soft-in">
       <div ref={sentinelRef} className="absolute top-0 left-0 w-full h-1 pointer-events-none" />
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-[#4A4E69]/5 pb-8">
         <div className="flex items-center gap-6">
           <ShibaMascot size="sm" message={STRINGS.mascot.grammar} />
           <div>
             <h2 className="text-2xl font-black text-[#4A4E69] anime-title flex items-center gap-4">
-                <div className="p-2 bg-[#B4E4C3]/30 rounded-xl text-[#B4E4C3]">
-                  <GraduationCap size={24} />
-                </div>
+                <div className="p-2 bg-[#B4E4C3]/30 rounded-xl text-[#B4E4C3]"><GraduationCap size={24} /></div>
                 {STRINGS.grammar.title}
             </h2>
             <p className="text-[10px] font-black text-[#4A4E69]/30 uppercase tracking-[0.45em] mt-3">{STRINGS.grammar.subtitle}</p>
@@ -124,7 +121,6 @@ const Grammar: React.FC = () => {
         </button>
       </div>
 
-      {/* Edit Modal Popup */}
       {isFormOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-[#4A4E69]/60 backdrop-blur-sm">
           <div className="absolute inset-0" onClick={() => setIsFormOpen(false)} />
@@ -167,7 +163,7 @@ const Grammar: React.FC = () => {
 
               {editingId && (
                 <div className="grid grid-cols-2 gap-4">
-                  <button type="button" onClick={() => logReview(DataType.GRAMMAR, editingId, ReviewResult.MASTERED)} className="flex items-center justify-center gap-2 py-3 bg-[#B4E4C3]/10 text-[#4A4E69] border border-[#B4E4C3]/30 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-[#B4E4C3] hover:text-white transition-all">
+                  <button type="button" onClick={handleMarkMastered} className="flex items-center justify-center gap-2 py-3 bg-[#B4E4C3]/10 text-[#4A4E69] border border-[#B4E4C3]/30 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-[#B4E4C3] hover:text-white transition-all">
                     <Trophy size={14} /> Mark Mastered
                   </button>
                   <button type="button" onClick={handleResetProgress} className="flex items-center justify-center gap-2 py-3 bg-[#FFB7C5]/10 text-[#FFB7C5] border border-[#FFB7C5]/30 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-[#FFB7C5] hover:text-white transition-all">
@@ -184,23 +180,24 @@ const Grammar: React.FC = () => {
         </div>
       )}
 
-      {/* Toolbar */}
       <div className="space-y-6">
         <div className="relative group">
-            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-[#4A4E69]/20 group-focus-within:text-[#B4E4C3] transition-colors">
-                <Search size={20} />
-            </div>
+            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-[#4A4E69]/20 group-focus-within:text-[#B4E4C3] transition-colors"><Search size={20} /></div>
             <input ref={searchInputRef} className="w-full pl-14 pr-8 py-5 bg-white border border-[#4A4E69]/10 rounded-2xl outline-none shadow-sm focus:shadow-xl focus:border-[#B4E4C3]/20 transition-all font-bold text-lg" placeholder={STRINGS.common.searchPlaceholder} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
         
         <div className="flex gap-4 flex-wrap items-center">
-            <div className="bg-white border border-[#4A4E69]/5 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm hover:border-[#B4E4C3]/20 transition-all cursor-pointer">
-                <span className="text-[9px] font-black text-[#4A4E69]/30 uppercase tracking-[0.2em]">Level</span>
-                <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} className="bg-transparent outline-none font-black text-[#4A4E69] text-[10px] cursor-pointer">
-                    <option value="All">All</option>
-                    {['N5','N4','N3','N2','N1'].map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-            </div>
+            {[
+              { label: 'Level', val: filterLevel, set: setFilterLevel, opts: ['All', 'N5','N4','N3','N2','N1'] },
+              { label: 'Stat', val: filterStatus, set: setFilterStatus, opts: ['All', 'new', 'learning', 'review', 'mastered'] }
+            ].map(f => (
+                <div key={f.label} className="bg-white border border-[#4A4E69]/5 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm hover:border-[#B4E4C3]/20 transition-all cursor-pointer">
+                    <span className="text-[9px] font-black text-[#4A4E69]/30 uppercase tracking-[0.2em]">{f.label}</span>
+                    <select value={f.val} onChange={e => f.set(e.target.value)} className="bg-transparent outline-none font-black text-[#4A4E69] text-[10px] cursor-pointer">
+                        {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                </div>
+            ))}
             <div className="ml-auto bg-white border border-[#4A4E69]/5 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm">
                 <ArrowUpDown size={14} className="text-[#4A4E69]/20" />
                 <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="bg-transparent outline-none font-black text-[#4A4E69] text-[10px]">
@@ -227,22 +224,17 @@ const Grammar: React.FC = () => {
                 {g.examples.length > 0 && (
                     <div className="bg-[#FAF9F6] p-6 rounded-3xl border border-[#4A4E69]/5 space-y-3 mb-6 flex-1 shadow-inner">
                         {g.examples.slice(0, 3).map((ex, i) => (
-                            <p key={i} className="text-[13px] font-bold text-[#4A4E69] jp-text flex gap-3">
-                                <span className="opacity-20 text-[11px] font-black">{i+1}</span> {ex}
-                            </p>
+                            <p key={i} className="text-[13px] font-bold text-[#4A4E69] jp-text flex gap-3"><span className="opacity-20 text-[11px] font-black">{i+1}</span> {ex}</p>
                         ))}
                     </div>
                 )}
-                
                 <div className="mt-auto pt-8 border-t border-[#4A4E69]/5 flex items-center justify-between">
                     <div className="flex-1 max-w-[120px]">
                         <div className="text-[8px] font-black text-[#4A4E69]/20 uppercase tracking-[0.2em] mb-2">{mastery}% Mastery</div>
-                        <div className="w-full h-1.5 bg-[#FAF9F6] rounded-full overflow-hidden shadow-inner">
-                            <div className="h-full bg-[#B4E4C3] transition-all duration-1000" style={{ width: `${mastery}%` }}></div>
-                        </div>
+                        <div className="w-full h-1.5 bg-[#FAF9F6] rounded-full overflow-hidden shadow-inner"><div className="h-full bg-[#B4E4C3] transition-all duration-1000" style={{ width: `${mastery}%` }}></div></div>
                     </div>
                     <div className="flex gap-2">
-                         <button onClick={(e) => { handleEdit(e, g); }} className="p-3 bg-[#78A2CC]/10 text-[#78A2CC] rounded-xl hover:bg-[#78A2CC] hover:text-white transition-all shadow-sm"><Edit2 size={20}/></button>
+                         <button onClick={(e) => handleEdit(e, g)} className="p-3 bg-[#78A2CC]/10 text-[#78A2CC] rounded-xl hover:bg-[#78A2CC] hover:text-white transition-all shadow-sm"><Edit2 size={20}/></button>
                          <button onClick={(e) => { if(window.confirm(STRINGS.common.confirmDelete)) deleteGrammar([g.id]); }} className="p-3 bg-[#FFB7C5]/10 text-[#FFB7C5] rounded-xl hover:bg-[#FFB7C5] hover:text-white transition-all shadow-sm"><Trash2 size={20}/></button>
                     </div>
                 </div>
@@ -255,10 +247,7 @@ const Grammar: React.FC = () => {
         )}
       </div>
 
-      <div className={clsx(
-        "fixed bottom-8 right-8 z-[150] flex flex-col items-end gap-4 transition-all duration-300 transform",
-        showFAB ? "scale-100 opacity-100" : "scale-0 opacity-0 pointer-events-none"
-      )}>
+      <div className={clsx("fixed bottom-8 right-8 z-[150] flex flex-col items-end gap-4 transition-all duration-300 transform", showFAB ? "scale-100 opacity-100" : "scale-0 opacity-0 pointer-events-none")}>
         <div className={clsx("flex flex-col items-end gap-3 transition-all", isExpanded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none")}>
           <button onClick={scrollToFilters} className="w-12 h-12 bg-white text-[#78A2CC] rounded-full flex items-center justify-center border border-[#4A4E69]/5 hover:bg-[#78A2CC] hover:text-white transition-all"><Search size={20}/></button>
           <button onClick={handleOpenAdd} className="w-12 h-12 bg-white text-[#FFB7C5] rounded-full flex items-center justify-center border border-[#4A4E69]/5 hover:bg-[#FFB7C5] hover:text-white transition-all"><Plus size={20}/></button>
@@ -267,7 +256,6 @@ const Grammar: React.FC = () => {
             {isExpanded ? <X size={28}/> : <Plus size={28}/>}
         </button>
       </div>
-
       <div className="h-10"></div>
     </div>
   );
