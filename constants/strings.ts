@@ -2,7 +2,7 @@ export const STRINGS = {
   common: {
     appName: "Nihongo Flow",
     appSubtitle: "Learning Engine",
-    version: "v1.2.0 FLOW",
+    version: "v1.2.1 DEPLOYED",
     loading: "Initializing dojo...",
     cancel: "Cancel",
     save: "Save Changes",
@@ -27,7 +27,7 @@ export const STRINGS = {
   },
   home: {
     title: "Nihongo Flow",
-    subtitle: "Local Study Dojo v1.2",
+    subtitle: "Local Study Dojo v1.2.1",
     syncBtn: "Sync Local Folder",
     guestBtn: "Guest Storage",
     syncNote: "Recommended for persistence",
@@ -106,7 +106,6 @@ export const STRINGS = {
     master: "Master",
     noItems: "No items match your training filters."
   },
-  // Added missing learn strings
   learn: {
     title: "LEARNING MODE",
     subtitle: "Custom Study Session",

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, HelpCircle, X, CheckSquare, Sparkles, FolderIcon, BookOpen, BrainCircuit } from 'lucide-react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +14,19 @@ const Home: React.FC = () => {
   const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const isReady = dirHandle || isLocalMode;
+
+  // Auto-navigate if everything is green and ready
+  useEffect(() => {
+    if (isReady) {
+      const allFilesOk = Object.values(filesStatus).every(status => status === true);
+      const hasStatusData = Object.keys(filesStatus).length > 0;
+      
+      // If we have verified all files are connected/initialized, skip the gateway
+      if (allFilesOk && hasStatusData) {
+        navigate('/dashboard');
+      }
+    }
+  }, [isReady, filesStatus, navigate]);
 
   const handleEnter = () => navigate('/dashboard');
 
@@ -42,7 +55,7 @@ const Home: React.FC = () => {
             <h1 className="text-2xl font-black text-[#4A4E69] anime-title tracking-tight leading-none uppercase">
               NIHONGO FLOW
             </h1>
-            <p className="text-[#4A4E69]/50 text-[9px] font-black uppercase tracking-[0.3em] mt-2">Local Study Dojo v1.1</p>
+            <p className="text-[#4A4E69]/50 text-[9px] font-black uppercase tracking-[0.3em] mt-2">Local Study Dojo v1.2.1</p>
           </div>
 
           {!isReady ? (
@@ -88,7 +101,7 @@ const Home: React.FC = () => {
                     <div key={key} className="flex items-center justify-between text-[10px] font-black">
                       <span className="text-[#4A4E69] opacity-60 uppercase">{key}.csv</span>
                       <span className={exists ? "text-[#B4E4C3]" : "text-[#78A2CC]"}>
-                        {exists ? "CONNECTED" : "INITIALIZED"}
+                        {exists ? "CONNECTED" : "SYNC ISSUE"}
                       </span>
                     </div>
                   ))}
