@@ -117,7 +117,7 @@ const Kanji: React.FC = () => {
   };
 
   return (
-    <div className="p-7 md:p-11 pt-20 md:pt-24 max-w-7xl mx-auto space-y-9 animate-soft-in">
+    <div className="p-7 md:p-11 pt-28 md:pt-36 max-w-7xl mx-auto space-y-9 animate-soft-in">
       <div ref={sentinelRef} className="absolute top-0 left-0 w-full h-1 pointer-events-none" />
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-[#4A4E69]/5 pb-8">

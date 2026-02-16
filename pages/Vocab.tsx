@@ -147,7 +147,7 @@ const Vocab: React.FC = () => {
   }, [vocabData, searchTerm, filterLevel, filterPos, filterStatus, sortBy, getMasteryPercentage, getLearningStage]);
 
   return (
-    <div className="relative p-7 md:p-11 pt-20 md:pt-24 max-w-7xl mx-auto space-y-9">
+    <div className="relative p-7 md:p-11 pt-28 md:pt-36 max-w-7xl mx-auto space-y-9">
       <div ref={sentinelRef} className="absolute top-0 left-0 w-full h-1 pointer-events-none" />
 
       <div className="animate-soft-in space-y-9">

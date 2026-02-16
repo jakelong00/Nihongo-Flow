@@ -27,11 +27,24 @@ export const ShibaMascot: React.FC<ShibaMascotProps> = ({
     lg: 'w-44 h-44'
   };
 
+  // Adjust bubble offset based on mascot size
+  const bubbleOffsets = {
+    sm: '-top-10',
+    md: '-top-12',
+    lg: '-top-14'
+  };
+
   return (
-    <div className={clsx("relative flex flex-col items-center", className)}>
+    <div className={clsx(
+      "relative flex flex-col items-center transition-all", 
+      className
+    )}>
       {message && (
-        <div className="absolute -top-14 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white border-2 border-[#4A4E69]/10 px-5 py-2.5 rounded-2xl shadow-xl animate-soft-in z-[50]">
-          <p className="text-[10px] font-black anime-title text-[#4A4E69] uppercase tracking-wider">
+        <div className={clsx(
+          "absolute left-1/2 -translate-x-1/2 whitespace-nowrap bg-white border-2 border-[#4A4E69]/10 px-4 py-2 rounded-2xl shadow-xl animate-soft-in z-[50]",
+          bubbleOffsets[size]
+        )}>
+          <p className="text-[9px] font-black anime-title text-[#4A4E69] uppercase tracking-wider">
             {message}
           </p>
           <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-b-2 border-r-2 border-[#4A4E69]/10 rotate-45"></div>

@@ -1,9 +1,14 @@
-
 export enum DataType {
   VOCAB = 'vocab',
   KANJI = 'kanji',
   GRAMMAR = 'grammar',
   STATS = 'stats'
+}
+
+export enum StorageProvider {
+  LOCAL_FS = 'local-fs',
+  BROWSER = 'browser',
+  NONE = 'none'
 }
 
 export interface VocabItem {
@@ -14,7 +19,6 @@ export interface VocabItem {
   partOfSpeech: string;
   jlpt: string;
   chapter: string;
-  // Specific conjugation fields for better CSV readability
   te?: string;
   nai?: string;
   masu?: string;
@@ -68,7 +72,7 @@ export enum LearningStage {
 
 export interface FileContextType {
   dirHandle: FileSystemDirectoryHandle | null;
-  isLocalMode: boolean;
+  storageProvider: StorageProvider;
   isFileSystemSupported: boolean;
   filesStatus: Record<string, boolean>;
   vocabData: VocabItem[];

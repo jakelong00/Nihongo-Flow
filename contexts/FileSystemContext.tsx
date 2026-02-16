@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useMemo, useCallback, useEf
 import { 
   FileContextType, 
   DataType, 
+  StorageProvider,
   VocabItem, 
   KanjiItem, 
   GrammarItem, 
@@ -52,7 +53,7 @@ const generateNextId = (items: { id: string }[]): string => {
 
 export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
-  const [isLocalMode, setIsLocalMode] = useState(false);
+  const [storageProvider, setStorageProvider] = useState<StorageProvider>(StorageProvider.NONE);
   const [filesStatus, setFilesStatus] = useState<Record<string, boolean>>({});
   const [vocabData, setVocabData] = useState<VocabItem[]>([]);
   const [kanjiData, setKanjiData] = useState<KanjiItem[]>([]);
@@ -60,10 +61,22 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [statsData, setStatsData] = useState<StatItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Track if we are currently loading files to prevent auto-save from overwriting fresh loads
   const isInitializing = useRef(false);
-
-  const isFileSystemSupported = useMemo(() => typeof window.showDirectoryPicker !== 'undefined', []);
+  
+  // Detection for File System support and iframe restrictions
+  const isFileSystemSupported = useMemo(() => {
+    // Basic API check
+    const supported = typeof window.showDirectoryPicker !== 'undefined';
+    // Check if in a restricted environment (cross-origin iframe)
+    try {
+        // Simple test to see if we're in an iframe that might be restricted
+        const inIframe = window.self !== window.top;
+        return supported && !inIframe;
+    } catch (e) {
+        // If window.top access is blocked, we are definitely in a cross-origin iframe
+        return false;
+    }
+  }, []);
 
   const hydrateData = useCallback(<T,>(data: any[], type: DataType): T[] => {
       if (type === DataType.GRAMMAR) {
@@ -87,21 +100,21 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (handle) {
       const file = await handle.getFile();
       text = await file.text();
-    } else if (isLocalMode) {
+    } else if (storageProvider === StorageProvider.BROWSER) {
       text = localStorage.getItem(`${STORAGE_PREFIX}${fileName}`) || '';
     }
     
     if (!text) return [];
     const parsed = parseCSV<any>(text);
     return hydrateData<T>(parsed, dataType);
-  }, [isLocalMode, hydrateData]);
+  }, [storageProvider, hydrateData]);
 
   const writeFileData = useCallback(async (dataType: DataType, data: any[]) => {
     if (isInitializing.current || isLoading) return;
     const csvContent = toCSV(data);
     const fileName = FILE_NAMES[dataType];
     
-    if (dirHandle) {
+    if (storageProvider === StorageProvider.LOCAL_FS && dirHandle) {
       try {
         const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
         const writable = await fileHandle.createWritable();
@@ -110,12 +123,12 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (e) {
         console.error(`Failed to write ${fileName} to file system`, e);
       }
-    } else if (isLocalMode) {
+    } else if (storageProvider === StorageProvider.BROWSER) {
       localStorage.setItem(`${STORAGE_PREFIX}${fileName}`, csvContent);
     }
-  }, [dirHandle, isLocalMode, isLoading]);
+  }, [dirHandle, storageProvider, isLoading]);
 
-  // Reactive persistence - save whenever data changes
+  // Persistence effects
   useEffect(() => { if (vocabData.length > 0) writeFileData(DataType.VOCAB, vocabData); }, [vocabData, writeFileData]);
   useEffect(() => { if (kanjiData.length > 0) writeFileData(DataType.KANJI, kanjiData); }, [kanjiData, writeFileData]);
   useEffect(() => { if (grammarData.length > 0) writeFileData(DataType.GRAMMAR, grammarData); }, [grammarData, writeFileData]);
@@ -159,18 +172,27 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const selectDirectory = async () => {
     try {
+      if (typeof window.showDirectoryPicker === 'undefined') {
+          throw new Error("NOT_SUPPORTED");
+      }
       const handle = await window.showDirectoryPicker();
       setDirHandle(handle);
-      setIsLocalMode(false);
+      setStorageProvider(StorageProvider.LOCAL_FS);
       await loadAllFiles(handle);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Directory selection failed", e);
+      if (e.name === 'SecurityError') {
+          throw new Error("IFRAME_RESTRICTION");
+      }
+      if (e.name === 'AbortError') {
+          return; // User cancelled
+      }
       throw e;
     }
   };
 
   const useBrowserStorage = async () => {
-    setIsLocalMode(true);
+    setStorageProvider(StorageProvider.BROWSER);
     setDirHandle(null);
     await loadAllFiles(null);
   };
@@ -238,7 +260,7 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetDirectory = () => {
     setDirHandle(null);
-    setIsLocalMode(false);
+    setStorageProvider(StorageProvider.NONE);
     setVocabData([]);
     setKanjiData([]);
     setGrammarData([]);
@@ -247,7 +269,7 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const value = {
-    dirHandle, isLocalMode, isFileSystemSupported, filesStatus, vocabData, kanjiData, grammarData, statsData, isLoading,
+    dirHandle, storageProvider, isFileSystemSupported, filesStatus, vocabData, kanjiData, grammarData, statsData, isLoading,
     selectDirectory, useBrowserStorage, addVocab, updateVocab, deleteVocab, addKanji, updateKanji, deleteKanji,
     addGrammar, updateGrammar, deleteGrammar, logReview, resetItemStats, getLearningStage, getMasteryPercentage, resetDirectory
   };

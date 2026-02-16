@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { HelpCircle, FolderCheck, BookOpen, BrainCircuit, CheckSquare, Info, ShieldCheck, Database, Sparkles } from 'lucide-react';
 import { STRINGS } from '../constants/strings';
@@ -7,7 +6,7 @@ import clsx from 'clsx';
 
 const About: React.FC = () => {
   return (
-    <div className="p-7 md:p-11 pt-24 max-w-5xl mx-auto space-y-14 animate-soft-in">
+    <div className="p-7 md:p-11 pt-56 max-w-5xl mx-auto space-y-14 animate-soft-in">
       {/* Page Header */}
       <div className="text-center space-y-5">
         <div className="inline-block relative">

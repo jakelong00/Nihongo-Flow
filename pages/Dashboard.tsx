@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { DataType } from '../types';
@@ -78,12 +77,17 @@ const Dashboard: React.FC = () => {
     // Calculate Streak
     let streak = 0;
     const sortedDates = Object.keys(counts).sort().reverse();
-    const todayStr = new Date().toISOString().split('T')[0];
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    // Fix: Removed incorrect usage of 'i' which was out of scope and causing a crash.
+    // Instead, calculate today and yesterday strings reliably using Date objects.
+    const todayRef = new Date();
+    const todayStr = todayRef.toISOString().split('T')[0];
+    
+    const yesterdayRef = new Date();
+    yesterdayRef.setDate(todayRef.getDate() - 1);
+    const yestStr = yesterdayRef.toISOString().split('T')[0];
 
-    if (counts[todayStr] || counts[yesterdayStr]) {
+    if (counts[todayStr] || counts[yestStr]) {
         for (const date of sortedDates) {
             if (counts[date]) streak++;
             else break;
@@ -93,7 +97,7 @@ const Dashboard: React.FC = () => {
     // Group weeks
     const resultWeeks = [];
     let currentWeek = [];
-    const firstDay = days[0].dayOfWeek;
+    const firstDay = days.length > 0 ? days[0].dayOfWeek : 0;
     for (let i = 0; i < firstDay; i++) {
       currentWeek.push(null);
     }
@@ -131,7 +135,7 @@ const Dashboard: React.FC = () => {
   }, [selectedDate, activityData]);
 
   return (
-    <div className="p-7 md:p-11 pt-24 md:pt-28 max-w-7xl mx-auto space-y-10 animate-soft-in">
+    <div className="p-7 md:p-11 pt-28 md:pt-36 max-w-7xl mx-auto space-y-10 animate-soft-in">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 border-b border-[#4A4E69]/5 pb-10">
         <div className="flex items-center gap-8">

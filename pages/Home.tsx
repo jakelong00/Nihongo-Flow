@@ -1,27 +1,25 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, HelpCircle, X, CheckSquare, Sparkles, FolderIcon, BookOpen, BrainCircuit } from 'lucide-react';
+import { ArrowRight, HelpCircle, X, CheckSquare, Sparkles, FolderIcon, BookOpen, BrainCircuit, AlertCircle } from 'lucide-react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { useNavigate } from 'react-router-dom';
 import { STRINGS } from '../constants/strings';
+import { StorageProvider } from '../types';
 import { ShibaMascot } from '../components/ShibaMascot';
 import clsx from 'clsx';
 
 const Home: React.FC = () => {
-  const { dirHandle, isLocalMode, selectDirectory, useBrowserStorage, filesStatus, isFileSystemSupported } = useFileSystem();
+  const { storageProvider, selectDirectory, useBrowserStorage, filesStatus, isFileSystemSupported } = useFileSystem();
   const navigate = useNavigate();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
 
-  const isReady = dirHandle || isLocalMode;
+  const isReady = storageProvider !== StorageProvider.NONE;
 
-  // Auto-navigate if everything is green and ready
   useEffect(() => {
     if (isReady) {
       const allFilesOk = Object.values(filesStatus).every(status => status === true);
       const hasStatusData = Object.keys(filesStatus).length > 0;
-      
-      // If we have verified all files are connected/initialized, skip the gateway
       if (allFilesOk && hasStatusData) {
         navigate('/dashboard');
       }
@@ -31,11 +29,17 @@ const Home: React.FC = () => {
   const handleEnter = () => navigate('/dashboard');
 
   const handleSelectDirectory = async () => {
-    if (!isFileSystemSupported) return;
+    setErrorMsg(null);
     try {
         await selectDirectory();
     } catch (error: any) {
-        if (error.name !== 'AbortError') setErrorMsg(STRINGS.home.errors.generic + error.message);
+        if (error.message === "IFRAME_RESTRICTION") {
+            setErrorMsg("Local folder access is blocked in this preview environment. Please use Guest Storage instead.");
+        } else if (error.message === "NOT_SUPPORTED") {
+            setErrorMsg(STRINGS.home.errors.notSupported);
+        } else {
+            setErrorMsg(STRINGS.home.errors.generic + error.message);
+        }
     }
   };
 
@@ -46,8 +50,12 @@ const Home: React.FC = () => {
       <div className="max-w-md w-full relative z-10 animate-soft-in">
         <div className="bg-white border border-[#4A4E69]/10 p-8 pt-12 rounded-[40px] shadow-2xl relative">
           
-          <button onClick={() => setIsGuideOpen(true)} className="absolute top-6 right-6 text-[#4A4E69]/40 hover:text-[#78A2CC] transition-colors z-10">
-             <HelpCircle size={20} />
+          <button 
+            onClick={() => setIsGuideOpen(true)} 
+            className="absolute top-6 right-6 flex items-center gap-2 px-4 py-2 rounded-full bg-[#FAF9F6] border border-[#4A4E69]/20 text-[#4A4E69] hover:text-[#78A2CC] hover:border-[#78A2CC]/40 transition-all z-10 shadow-sm"
+          >
+             <span className="text-[10px] font-black uppercase tracking-widest">How it works</span>
+             <HelpCircle size={16} />
           </button>
 
           <div className="text-center mb-8">
@@ -61,9 +69,12 @@ const Home: React.FC = () => {
           {!isReady ? (
             <div className="space-y-3">
               <button
-                disabled={!isFileSystemSupported}
+                disabled={!isFileSystemSupported && !errorMsg?.includes("blocked")}
                 onClick={handleSelectDirectory}
-                className="w-full group flex flex-col items-center justify-center p-6 bg-[#78A2CC] text-white rounded-[28px] hover:bg-[#6b95c2] transition-all duration-300 shadow-lg active:scale-95"
+                className={clsx(
+                    "w-full group flex flex-col items-center justify-center p-6 rounded-[28px] transition-all duration-300 shadow-lg active:scale-95",
+                    !isFileSystemSupported ? "bg-slate-200 text-slate-400 cursor-not-allowed opacity-60" : "bg-[#78A2CC] text-white hover:bg-[#6b95c2]"
+                )}
               >
                 <FolderIcon className="mb-2 group-hover:scale-110 transition-transform" size={24} />
                 <span className="font-black text-xs uppercase tracking-wider anime-title">Sync Local Folder</span>
@@ -77,16 +88,21 @@ const Home: React.FC = () => {
 
               <button
                   onClick={useBrowserStorage}
-                  className="w-full bg-white border-2 border-[#4A4E69]/10 text-[#4A4E69] py-4 rounded-[28px] font-black hover:bg-[#FAF9F6] transition-all shadow-sm flex items-center justify-center gap-3 text-xs anime-title"
+                  className={clsx(
+                      "w-full border-2 py-4 rounded-[28px] font-black transition-all shadow-sm flex items-center justify-center gap-3 text-xs anime-title",
+                      errorMsg?.includes("blocked") 
+                        ? "bg-[#78A2CC] text-white border-[#78A2CC] shadow-lg animate-wiggle" 
+                        : "bg-[#FAF9F6] border-dashed border-[#4A4E69]/10 text-[#4A4E69]/60 hover:bg-white"
+                  )}
               >
-                  <Sparkles size={16} className="text-[#FFB7C5]" /> 
-                  Guest Storage
+                  <Sparkles size={16} className={clsx(errorMsg?.includes("blocked") ? "text-white" : "text-[#FFB7C5]")} /> 
+                  Use Guest Storage
               </button>
 
               {errorMsg && (
-                <div className="bg-[#FFB7C5]/10 border border-[#FFB7C5]/30 p-3 rounded-xl text-[9px] font-bold text-[#4A4E69] mt-4 flex items-start gap-2">
-                   <X size={14} className="text-[#FFB7C5] shrink-0" />
-                   <p>{errorMsg}</p>
+                <div className="bg-[#FFB7C5]/10 border border-[#FFB7C5]/30 p-4 rounded-2xl text-[10px] font-bold text-[#4A4E69] mt-4 flex items-start gap-3 shadow-sm animate-soft-in">
+                   <AlertCircle size={18} className="text-[#FFB7C5] shrink-0" />
+                   <p className="leading-relaxed">{errorMsg}</p>
                 </div>
               )}
             </div>

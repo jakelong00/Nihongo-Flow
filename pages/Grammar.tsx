@@ -102,7 +102,7 @@ const Grammar: React.FC = () => {
   };
 
   return (
-    <div className="p-7 md:p-11 pt-20 md:pt-24 max-w-7xl mx-auto space-y-9 animate-soft-in">
+    <div className="p-7 md:p-11 pt-28 md:pt-36 max-w-7xl mx-auto space-y-9 animate-soft-in">
       <div ref={sentinelRef} className="absolute top-0 left-0 w-full h-1 pointer-events-none" />
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-[#4A4E69]/5 pb-8">
@@ -137,7 +137,7 @@ const Grammar: React.FC = () => {
                       <input value={formData.rule} onChange={e => setFormData({...formData, rule: e.target.value})} className="w-full p-4 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-2xl outline-none text-black font-black jp-text text-xl shadow-sm" required />
                   </div>
                   <div className="space-y-1">
-                      <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">JLPT Level</label>
+                      <label className="text-[9px) font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">JLPT Level</label>
                       <select value={formData.jlpt} onChange={e => setFormData({...formData, jlpt: e.target.value})} className="w-full p-4 bg-[#FAF9F6] rounded-2xl outline-none font-bold border border-[#4A4E69]/5 text-xs cursor-pointer">
                           {['N5','N4','N3','N2','N1'].map(n => <option key={n} value={n}>{n}</option>)}
                       </select>

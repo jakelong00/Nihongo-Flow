@@ -1,18 +1,18 @@
-
 import React, { useState, useMemo } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { BookOpen, GraduationCap, LayoutDashboard, Settings, Languages, BrainCircuit, Database, Ghost, Menu, X, HelpCircle, Sparkle } from 'lucide-react';
 import { useFileSystem } from '../contexts/FileSystemContext';
+import { StorageProvider } from '../types';
 import { ThemedIcon } from './ThemedIcon';
 import clsx from 'clsx';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { dirHandle, isLocalMode } = useFileSystem();
+  const { storageProvider } = useFileSystem();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  const isReady = dirHandle || isLocalMode;
+  const isReady = storageProvider !== StorageProvider.NONE;
 
   React.useEffect(() => {
     if (!isReady && location.pathname !== '/') {
@@ -79,7 +79,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
             <div className="overflow-hidden">
                 <div className="text-[9px] font-black text-[#4A4E69]/30 uppercase leading-none mb-0.5">Sync</div>
-                <div className="text-[10px] font-black text-[#4A4E69] truncate uppercase">{dirHandle ? dirHandle.name : "Local"}</div>
+                <div className="text-[10px] font-black text-[#4A4E69] truncate uppercase">
+                    {storageProvider === StorageProvider.LOCAL_FS ? 'Local Folder' : 'Browser Storage'}
+                </div>
             </div>
         </div>
       </div>
@@ -88,7 +90,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="flex h-full w-full bg-[#FAF9F6] overflow-hidden text-[#4A4E69] relative">
-      {/* Animated Zen Background elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-10">
           <span className="absolute top-[20%] left-[10%] text-9xl font-black jp-text animate-float select-none">学</span>
           <span className="absolute bottom-[20%] right-[10%] text-9xl font-black jp-text animate-float select-none" style={{ animationDelay: '1s' }}>心</span>
@@ -125,7 +126,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[75] lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
       )}
 
-      {/* Main Content: Ensure it fills the height and allows scrolling */}
       <main className={clsx(
         "flex-1 relative flex flex-col h-full overflow-hidden z-10", 
         isReady && "pt-16 lg:pt-0"
