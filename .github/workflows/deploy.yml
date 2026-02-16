@@ -28,14 +28,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          # Caching is disabled because package-lock.json is not present.
+          # To re-enable, run 'npm install' locally and commit the generated package-lock.json.
 
       - name: Install dependencies
-        # Ensure we have a clean install. 
         run: npm install
 
       - name: Build
-        # CI=false prevents the build from failing on warnings, which is common in GitHub Actions.
         run: CI=false npm run build
 
       - name: SPA Fallback
