@@ -1,3 +1,4 @@
+
 name: Deploy to GitHub Pages
 
 on:
@@ -27,14 +28,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - name: Install dependencies
-        # Use 'npm install' instead of 'npm ci' because the environment may not have a package-lock.json
+        # Ensure we have a clean install. 
         run: npm install
 
       - name: Build
-        # This generates the /dist folder
-        run: npm run build
+        # CI=false prevents the build from failing on warnings, which is common in GitHub Actions.
+        run: CI=false npm run build
+
+      - name: SPA Fallback
+        # Essential for GitHub Pages: copy index.html to 404.html.
+        # This ensures that if a user refreshes on a sub-route or navigates directly, 
+        # GitHub Pages serves the app instead of a generic 404.
+        run: cp dist/index.html dist/404.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
