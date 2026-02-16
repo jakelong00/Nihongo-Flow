@@ -6,6 +6,7 @@
 export const CUSTOM_ICON_PATHS: Record<string, string> = {
   // === BRANDING ===
   appLogo: "", // Location: Sidebar header, Mobile header, Home page hero. Guideline: Square, min 40x40px.
+  appMascot: "", // Location: Mascot companion. If empty, appLogo is used. If both empty, CSS fallback is used.
 
   // === NAVIGATION (Sidebar) ===
   navDashboard: "", // Location: Sidebar 'Dashboard' link. Guideline: 24x24px.

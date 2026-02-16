@@ -34,9 +34,9 @@ const Dashboard: React.FC = () => {
   };
 
   const stats = [
-    { name: 'VOCABULARY', total: vocabData.length, learned: getMastery(DataType.VOCAB), color: '#78A2CC' },
-    { name: 'KANJI DOJO', total: kanjiData.length, learned: getMastery(DataType.KANJI), color: '#FFB7C5' },
-    { name: 'GRAMMAR', total: grammarData.length, learned: getMastery(DataType.GRAMMAR), color: '#B4E4C3' },
+    { name: 'VOCABULARY', total: vocabData.length, learned: getMastery(DataType.VOCAB), color: '#78A2CC', jp: '語' },
+    { name: 'KANJI DOJO', total: kanjiData.length, learned: getMastery(DataType.KANJI), color: '#FFB7C5', jp: '漢' },
+    { name: 'GRAMMAR', total: grammarData.length, learned: getMastery(DataType.GRAMMAR), color: '#B4E4C3', jp: '文' },
   ];
 
   // Activity & Streak Logic
@@ -157,26 +157,26 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
       
-      {/* Top Cards */}
+      {/* Top Cards: Redesigned based on screenshot */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {stats.map((stat, idx) => {
           const masteryPercent = Math.round((stat.learned / (stat.total || 1)) * 100);
           return (
-            <div key={stat.name} className="bg-white border border-[#4A4E69]/5 p-9 rounded-[36px] shadow-sm hover:shadow-xl transition-all duration-500 group hover:-translate-y-2 overflow-hidden relative" style={{ animationDelay: `${idx * 0.1}s` }}>
-              <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
-                <span className="text-9xl font-black jp-text">{stat.name[0]}</span>
+            <div key={stat.name} className="bg-white border border-[#4A4E69]/5 p-10 rounded-[48px] shadow-sm hover:shadow-xl transition-all duration-500 group hover:-translate-y-2 overflow-hidden relative" style={{ animationDelay: `${idx * 0.1}s` }}>
+              <div className="absolute right-4 top-4 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
+                <span className="text-[140px] font-black jp-text leading-none select-none">{stat.jp}</span>
               </div>
-              <div className="flex justify-between items-start mb-10 relative z-10">
-                  <h3 className="anime-title text-[11px] font-black text-[#4A4E69]/30 uppercase tracking-[0.25em]">{stat.name}</h3>
-                  <span className="text-[10px] font-black anime-title text-[#4A4E69]/20 bg-[#FAF9F6] px-3 py-1 rounded-full border border-[#4A4E69]/5 shadow-inner">{stat.total} ITEMS</span>
+              <div className="flex justify-between items-start mb-12 relative z-10">
+                  <h3 className="anime-title text-[10px] font-black text-[#4A4E69]/30 uppercase tracking-[0.25em]">{stat.name}</h3>
+                  <span className="text-[9px] font-black anime-title text-[#4A4E69]/40 bg-[#FAF9F6] px-3 py-1.5 rounded-full border border-[#4A4E69]/5">{stat.total} ITEMS</span>
               </div>
-              <div className="flex items-baseline gap-4 mb-8 relative z-10">
-                  <span className="text-6xl font-black text-[#4A4E69] anime-title tracking-tighter drop-shadow-sm transition-all">
-                      {isLoaded ? masteryPercent : '0'}<span className="text-2xl opacity-20 ml-1">%</span>
+              <div className="flex items-baseline gap-2 mb-10 relative z-10">
+                  <span className="text-7xl font-black text-[#4A4E69] anime-title tracking-tighter">
+                      {isLoaded ? masteryPercent : '0'}<span className="text-2xl opacity-30 ml-1">%</span>
                   </span>
-                  <span className="text-[11px] font-black anime-title text-[#4A4E69]/30 uppercase tracking-widest">Mastery</span>
+                  <span className="text-[11px] font-black anime-title text-[#4A4E69]/30 uppercase tracking-[0.2em] ml-2">MASTERY</span>
               </div>
-              <div className="w-full bg-[#FAF9F6] h-3 rounded-full overflow-hidden shadow-inner relative z-10">
+              <div className="w-full bg-[#FAF9F6] h-1.5 rounded-full overflow-hidden shadow-inner relative z-10">
                   <div 
                       className="h-full transition-all duration-1000 ease-out rounded-full shadow-sm"
                       style={{ width: isLoaded ? `${masteryPercent}%` : '0%', backgroundColor: stat.color }}

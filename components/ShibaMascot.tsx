@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
+import React from 'react';
 import { Sparkles, Heart } from 'lucide-react';
+import { CUSTOM_ICON_PATHS } from '../config/customIcons';
 import clsx from 'clsx';
 
 interface ShibaMascotProps {
@@ -15,63 +15,11 @@ export const ShibaMascot: React.FC<ShibaMascotProps> = ({
   className, 
   size = 'md'
 }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    const cached = sessionStorage.getItem('shiba_mascot_base64');
-    if (cached) {
-      setImageUrl(cached);
-    } else {
-      generateMascot();
-    }
-  }, []);
-
-  const generateMascot = async () => {
-    if (!process.env.API_KEY) {
-      setHasError(true);
-      return;
-    }
-
-    setLoading(true);
-    setHasError(false);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [
-            {
-              text: "A highly simplified, cute 90s retro anime mascot: a round Shiba Inu head. Pastel orange and cream colors. Thick cel-shaded outlines. White background. Happy winking expression.",
-            },
-          ],
-        },
-        config: {
-          imageConfig: {
-            aspectRatio: "1:1"
-          }
-        },
-      });
-
-      if (response.candidates?.[0]?.content?.parts) {
-          for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) {
-              const base64 = `data:image/png;base64,${part.inlineData.data}`;
-              setImageUrl(base64);
-              sessionStorage.setItem('shiba_mascot_base64', base64);
-              break;
-            }
-          }
-      } else {
-          setHasError(true);
-      }
-    } catch (error) {
-      setHasError(true);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Static image resolution logic:
+  // 1. User provided mascot image
+  // 2. User provided app logo
+  // 3. CSS Fallback (if both are empty)
+  const mascotImg = CUSTOM_ICON_PATHS.appMascot || CUSTOM_ICON_PATHS.appLogo;
 
   const sizeClasses = {
     sm: 'w-16 h-16',
@@ -93,11 +41,10 @@ export const ShibaMascot: React.FC<ShibaMascotProps> = ({
       <div className={clsx(
         "rounded-full bg-white border-4 border-white shadow-2xl overflow-hidden flex items-center justify-center transition-all duration-1000 ring-4 ring-[#78A2CC]/5",
         "animate-float", // Constant breathing animation
-        sizeClasses[size],
-        loading && "animate-pulse"
+        sizeClasses[size]
       )}>
-        {imageUrl ? (
-          <img src={imageUrl} alt="Shiba-chan" className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" />
+        {mascotImg ? (
+          <img src={mascotImg} alt="Dojo Mascot" className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" />
         ) : (
           /* HIGH FIDELITY CSS SHIBA FALLBACK */
           <div className="relative w-full h-full bg-[#FFD166]/30 flex items-center justify-center">

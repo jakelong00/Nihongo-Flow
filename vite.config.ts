@@ -12,8 +12,7 @@ export default defineConfig({
       'react-dom': 'https://esm.sh/react-dom@18.2.0',
       'react-dom/client': 'https://esm.sh/react-dom@18.2.0/client',
       'react/': 'https://esm.sh/react@18.2.0/',
-      'react-dom/': 'https://esm.sh/react-dom@18.2.0/',
-      '@google/genai': 'https://esm.sh/@google/genai@1.41.0'
+      'react-dom/': 'https://esm.sh/react-dom@18.2.0/'
     }
   }
 })
