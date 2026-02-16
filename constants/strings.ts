@@ -1,9 +1,8 @@
-
 export const STRINGS = {
   common: {
     appName: "Nihongo Flow",
     appSubtitle: "Learning Engine",
-    version: "v1.1.0 SHIBA",
+    version: "v1.2.0 FLOW",
     loading: "Initializing dojo...",
     cancel: "Cancel",
     save: "Save Changes",
@@ -28,7 +27,7 @@ export const STRINGS = {
   },
   home: {
     title: "Nihongo Flow",
-    subtitle: "Local Study Dojo v1.1",
+    subtitle: "Local Study Dojo v1.2",
     syncBtn: "Sync Local Folder",
     guestBtn: "Guest Storage",
     syncNote: "Recommended for persistence",
