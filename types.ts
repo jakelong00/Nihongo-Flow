@@ -19,6 +19,7 @@ export interface VocabItem {
   partOfSpeech: string;
   jlpt: string;
   chapter: string;
+  source?: string;
   te?: string;
   nai?: string;
   masu?: string;
@@ -38,6 +39,7 @@ export interface KanjiItem {
   jlpt: string;
   strokes: string;
   chapter: string;
+  source?: string;
 }
 
 export interface GrammarItem {
@@ -47,6 +49,7 @@ export interface GrammarItem {
   examples: string[];
   jlpt: string;
   chapter: string;
+  source?: string;
 }
 
 export enum ReviewResult {

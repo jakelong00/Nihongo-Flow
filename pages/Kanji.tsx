@@ -1,7 +1,6 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
-import { Plus, Search, Trash2, Edit2, Check, X, RotateCcw, ArrowUpDown, Sparkles, Languages, Trophy } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, Check, X, RotateCcw, ArrowUpDown, Sparkles, Languages, Trophy, Tag } from 'lucide-react';
 import { DataType, KanjiItem, LearningStage, ReviewResult } from '../types';
 import { STRINGS } from '../constants/strings';
 import { fuzzySearch } from '../utils/textHelper';
@@ -9,7 +8,7 @@ import { ShibaMascot } from '../components/ShibaMascot';
 import clsx from 'clsx';
 
 const EMPTY_FORM: Omit<KanjiItem, 'id'> = {
-  character: '', onyomi: '', kunyomi: '', meaning: '', jlpt: 'N5', strokes: '', chapter: '1'
+  character: '', onyomi: '', kunyomi: '', meaning: '', jlpt: 'N5', strokes: '', chapter: '1', source: ''
 };
 
 const Kanji: React.FC = () => {
@@ -21,6 +20,7 @@ const Kanji: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filterLevel, setFilterLevel] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [filterSource, setFilterSource] = useState('All');
   const [sortBy, setSortBy] = useState<'id' | 'mastery_asc' | 'mastery_desc' | 'strokes'>('id');
   const [formData, setFormData] = useState<Omit<KanjiItem, 'id'>>(EMPTY_FORM);
 
@@ -37,6 +37,12 @@ const Kanji: React.FC = () => {
     if (sentinelRef.current) observer.observe(sentinelRef.current);
     return () => observer.disconnect();
   }, []);
+
+  const sources = useMemo(() => {
+    const s = new Set<string>();
+    kanjiData.forEach(k => k.source && s.add(k.source));
+    return Array.from(s).sort();
+  }, [kanjiData]);
 
   const handleEdit = (e: React.MouseEvent, item: KanjiItem) => {
     e.stopPropagation();
@@ -80,10 +86,11 @@ const Kanji: React.FC = () => {
 
   const filteredData = useMemo(() => {
     let data = kanjiData.filter(k => {
-        const matchSearch = fuzzySearch(searchTerm, k.character, k.meaning, k.onyomi, k.kunyomi);
+        const matchSearch = fuzzySearch(searchTerm, k.character, k.meaning, k.onyomi, k.kunyomi, k.source);
         const matchLevel = filterLevel === 'All' || k.jlpt === filterLevel;
         const matchStatus = filterStatus === 'All' || getLearningStage(DataType.KANJI, k.id) === filterStatus;
-        return matchSearch && matchLevel && matchStatus;
+        const matchSource = filterSource === 'All' || k.source === filterSource;
+        return matchSearch && matchLevel && matchStatus && matchSource;
     });
     return data.sort((a, b) => {
         if (sortBy === 'mastery_asc') return getMasteryPercentage(DataType.KANJI, a.id) - getMasteryPercentage(DataType.KANJI, b.id);
@@ -91,7 +98,7 @@ const Kanji: React.FC = () => {
         if (sortBy === 'strokes') return (parseInt(a.strokes) || 0) - (parseInt(b.strokes) || 0);
         return parseInt(b.id) - parseInt(a.id);
     });
-  }, [kanjiData, searchTerm, filterLevel, filterStatus, sortBy, getMasteryPercentage, getLearningStage]);
+  }, [kanjiData, searchTerm, filterLevel, filterStatus, filterSource, sortBy, getMasteryPercentage, getLearningStage]);
 
   const scrollToFilters = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -176,17 +183,30 @@ const Kanji: React.FC = () => {
                   <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">Meaning</label>
                   <input value={formData.meaning} onChange={e => setFormData({...formData, meaning: e.target.value})} className="w-full p-4 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-xl outline-none font-bold shadow-sm" required />
               </div>
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">Source / Textbook (Free Text)</label>
+                    <input 
+                      value={formData.source} 
+                      onChange={e => setFormData({...formData, source: e.target.value})} 
+                      className="w-full p-4 bg-[#FAF9F6] rounded-xl outline-none font-bold text-sm shadow-sm" 
+                      list="kanji-source-list" 
+                      placeholder="Type or select..."
+                    />
+                    <datalist id="kanji-source-list">
+                       {sources.map(s => <option key={s} value={s} />)}
+                    </datalist>
+                </div>
                 <div className="space-y-1">
                     <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">JLPT Level</label>
                     <select value={formData.jlpt} onChange={e => setFormData({...formData, jlpt: e.target.value})} className="w-full p-4 bg-[#FAF9F6] rounded-xl outline-none font-bold text-sm shadow-sm">
                         {['N5','N4','N3','N2','N1'].map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
                 </div>
-                <div className="space-y-1">
-                    <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">Chapter</label>
-                    <input value={formData.chapter} onChange={e => setFormData({...formData, chapter: e.target.value})} className="w-full p-4 bg-[#FAF9F6] rounded-xl outline-none font-bold text-sm shadow-sm" />
-                </div>
+              </div>
+              <div className="space-y-1">
+                  <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">Chapter</label>
+                  <input value={formData.chapter} onChange={e => setFormData({...formData, chapter: e.target.value})} className="w-full p-4 bg-[#FAF9F6] rounded-xl outline-none font-bold text-sm shadow-sm" />
               </div>
 
               {editingId && (
@@ -217,11 +237,12 @@ const Kanji: React.FC = () => {
         <div className="flex flex-wrap gap-4 items-center">
              {[
                {label: 'LEVEL', val: filterLevel, set: setFilterLevel, opts: ['All','N5','N4','N3','N2','N1']},
-               {label: 'STAT', val: filterStatus, set: setFilterStatus, opts: ['All', 'new', 'learning', 'review', 'mastered']}
+               {label: 'STAT', val: filterStatus, set: setFilterStatus, opts: ['All', 'new', 'learning', 'review', 'mastered']},
+               {label: 'SOURCE', val: filterSource, set: setFilterSource, opts: ['All', ...sources]}
              ].map(f => (
                  <div key={f.label} className="bg-white border border-[#4A4E69]/5 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm hover:border-[#FFB7C5]/20 transition-all cursor-pointer">
                      <span className="text-[9px] font-black text-[#4A4E69]/30 uppercase tracking-[0.2em]">{f.label}</span>
-                     <select value={f.val} onChange={e => f.set(e.target.value)} className="bg-transparent outline-none font-black text-[#4A4E69] text-[10px] cursor-pointer">
+                     <select value={f.val} onChange={e => f.set(e.target.value)} className="bg-transparent outline-none font-black text-[#4A4E69] text-[10px] cursor-pointer max-w-[100px]">
                          {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
                      </select>
                  </div>
@@ -246,7 +267,10 @@ const Kanji: React.FC = () => {
                 <button onClick={(e) => toggleSelection(e, k.id)} className={clsx("absolute top-6 left-6 p-2 rounded-xl transition-all shadow-sm z-20", isSelected ? "bg-[#FFB7C5] text-white" : "bg-[#FAF9F6] text-[#4A4E69]/10 group-hover:text-[#FFB7C5]")}>
                      {isSelected ? <Check size={16} /> : <div className="w-4 h-4 rounded-md border-2 border-current" />}
                 </button>
-                <div className="absolute top-6 right-6 text-[10px] bg-[#FAF9F6] text-[#4A4E69]/40 px-3 py-1.5 rounded-full font-black border border-[#4A4E69]/5 shadow-sm">{k.jlpt}</div>
+                <div className="absolute top-6 right-6 flex flex-col items-end gap-1.5">
+                    <div className="text-[10px] bg-[#FAF9F6] text-[#4A4E69]/40 px-3 py-1.5 rounded-full font-black border border-[#4A4E69]/5 shadow-sm">{k.jlpt}</div>
+                    {k.source && <div className="text-[7px] font-black text-[#FFB7C5] bg-[#FFB7C5]/5 px-2 py-0.5 rounded border border-[#FFB7C5]/10 max-w-[80px] truncate">{k.source}</div>}
+                </div>
                 <div className="flex flex-col items-center mt-6 mb-6">
                     <div className="text-7xl font-black text-[#4A4E69] jp-text mb-4 group-hover:scale-110 transition-transform duration-500 drop-shadow-sm">{k.character}</div>
                     <div className="text-sm font-black text-[#4A4E69] uppercase tracking-wider text-center line-clamp-1 h-5">{k.meaning}</div>
@@ -290,7 +314,7 @@ const Kanji: React.FC = () => {
           <button onClick={scrollToFilters} className="w-12 h-12 bg-white text-[#78A2CC] rounded-full flex items-center justify-center border border-[#4A4E69]/5 hover:bg-[#78A2CC] hover:text-white transition-all"><Search size={20}/></button>
           <button onClick={handleOpenAdd} className="w-12 h-12 bg-white text-[#FFB7C5] rounded-full flex items-center justify-center border border-[#4A4E69]/5 hover:bg-[#FFB7C5] hover:text-white transition-all"><Plus size={20}/></button>
         </div>
-        <button onClick={() => setIsExpanded(!isExpanded)} className="w-14 h-14 rounded-full flex items-center justify-center text-white bg-[#FFB7C5] hover:bg-[#e091a1] border-b-4 border-[#d17f8f] active:scale-95 transition-all">
+        <button onClick={() => setIsExpanded(!isExpanded)} className="w-14 h-14 rounded-full flex items-center justify-center text-white bg-[#FFB7C5] hover:bg-[#e091a1] border-b-4 border-[#e091a1] active:scale-95 transition-all">
             {isExpanded ? <X size={28}/> : <Plus size={28}/>}
         </button>
       </div>

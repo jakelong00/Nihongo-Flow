@@ -108,6 +108,13 @@
       .preserve-3d { transform-style: preserve-3d; }
       .backface-hidden { backface-visibility: hidden; }
       .rotate-y-180 { transform: rotateY(180deg); }
+      .rotate-y-minus-180 { transform: rotateY(-180deg); }
+
+      /* Optimization for long lists */
+      .list-item-optimized {
+        content-visibility: auto;
+        contain-intrinsic-size: 0 100px;
+      }
     </style>
     <script type="importmap">
 {

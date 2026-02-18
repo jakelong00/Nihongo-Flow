@@ -38,8 +38,7 @@ const Dashboard: React.FC = () => {
     { name: 'GRAMMAR', total: grammarData.length, learned: getMastery(DataType.GRAMMAR), color: '#B4E4C3', jp: '文' },
   ];
 
-  // Activity & Streak Logic
-  const { activityData, weeks, currentStreak, uniqueBreakdown } = useMemo(() => {
+  const { weeks, currentStreak, uniqueBreakdown, activityData } = useMemo(() => {
     const counts: Record<string, number> = {};
     const detailedCounts: Record<string, Record<DataType, number>> = {};
     const uniqueItems: Record<DataType, Set<string>> = {
@@ -62,7 +61,8 @@ const Dashboard: React.FC = () => {
 
     const days = [];
     const today = new Date();
-    for (let i = 363; i >= 0; i--) {
+    // 52 weeks + current week
+    for (let i = 371; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
@@ -70,6 +70,8 @@ const Dashboard: React.FC = () => {
         date: dateStr,
         count: counts[dateStr] || 0,
         dayOfWeek: d.getDay(),
+        month: d.toLocaleString('default', { month: 'short' }),
+        monthStart: d.getDate() === 1,
         details: detailedCounts[dateStr] || null
       });
     }
@@ -77,12 +79,8 @@ const Dashboard: React.FC = () => {
     // Calculate Streak
     let streak = 0;
     const sortedDates = Object.keys(counts).sort().reverse();
-    
-    // Fix: Removed incorrect usage of 'i' which was out of scope and causing a crash.
-    // Instead, calculate today and yesterday strings reliably using Date objects.
     const todayRef = new Date();
     const todayStr = todayRef.toISOString().split('T')[0];
-    
     const yesterdayRef = new Date();
     yesterdayRef.setDate(todayRef.getDate() - 1);
     const yestStr = yesterdayRef.toISOString().split('T')[0];
@@ -94,9 +92,9 @@ const Dashboard: React.FC = () => {
         }
     }
 
-    // Group weeks
     const resultWeeks = [];
     let currentWeek = [];
+    // Pad first week
     const firstDay = days.length > 0 ? days[0].dayOfWeek : 0;
     for (let i = 0; i < firstDay; i++) {
       currentWeek.push(null);
@@ -136,14 +134,13 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="p-7 md:p-11 pt-28 md:pt-36 max-w-7xl mx-auto space-y-10 animate-soft-in">
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 border-b border-[#4A4E69]/5 pb-10">
         <div className="flex items-center gap-8">
             <ShibaMascot size="md" message={getShibaQuote()} />
             <div>
                 <h2 className="text-4xl font-black anime-title tracking-tight text-[#4A4E69] leading-none uppercase">MISSION LOG</h2>
                 <div className="flex items-center gap-3 mt-3">
-                    <span className="text-[10px] font-black anime-title text-[#4A4E69]/30 uppercase tracking-[0.4em]">
+                    <span className="text-[10px] font-black anime-title text-[#4A4E69]/30 uppercase tracking-[0.45em]">
                         {isLoaded ? "SYSTEMS SYNCHRONIZED" : "INITIALIZING..."}
                     </span>
                     <div className="w-1.5 h-1.5 rounded-full bg-[#B4E4C3] animate-pulse"></div>
@@ -161,7 +158,6 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
       
-      {/* Top Cards: Redesigned based on screenshot */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {stats.map((stat, idx) => {
           const masteryPercent = Math.round((stat.learned / (stat.total || 1)) * 100);
@@ -191,11 +187,8 @@ const Dashboard: React.FC = () => {
         })}
       </div>
 
-      {/* Responsive Heatmap & Consistency Card */}
       <div className="bg-white border border-[#4A4E69]/5 p-6 md:p-10 rounded-[48px] shadow-sm overflow-hidden group">
         <div className="flex flex-col xl:flex-row gap-10">
-            
-            {/* Left Column: The Heatmap */}
             <div className="flex-1 overflow-hidden">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-3">
@@ -211,18 +204,21 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex gap-4">
-                    {/* Day Labels */}
-                    <div className="flex flex-col justify-between text-[8px] font-black text-[#4A4E69]/20 uppercase pb-4 pt-1 h-[140px]">
-                        <span>Mon</span>
-                        <span>Wed</span>
-                        <span>Fri</span>
-                    </div>
-
-                    <div className="flex-1 overflow-x-auto custom-scrollbar pb-4 cursor-grab active:cursor-grabbing">
-                        <div className="flex gap-1.5 min-w-max">
-                            {weeks.map((week, wIdx) => (
-                            <div key={wIdx} className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
+                    <div className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-6">
+                        {weeks.map((week, wIdx) => {
+                          const firstValidDay = week.find(d => d !== null);
+                          const showMonth = firstValidDay?.monthStart || (wIdx === 0 && firstValidDay);
+                          
+                          return (
+                            <div key={wIdx} className="flex flex-col gap-1.5 min-w-max">
+                                <div className="h-4 flex items-end">
+                                   {showMonth && (
+                                     <span className="text-[8px] font-black text-[#4A4E69]/40 uppercase tracking-tighter">
+                                       {firstValidDay.month}
+                                     </span>
+                                   )}
+                                </div>
                                 {week.map((day, dIdx) => (
                                 <button 
                                     key={dIdx}
@@ -238,13 +234,12 @@ const Dashboard: React.FC = () => {
                                 />
                                 ))}
                             </div>
-                            ))}
-                        </div>
+                          );
+                        })}
                     </div>
                 </div>
             </div>
 
-            {/* Right Column: Key Metrics (Unique Breakdown) */}
             <div className="xl:w-72 flex flex-col gap-6 shrink-0 xl:border-l xl:border-[#4A4E69]/5 xl:pl-10">
                 <div className="p-6 bg-[#FAF9F6] rounded-[32px] border border-[#4A4E69]/5 relative overflow-hidden group/card">
                     <div className="absolute top-0 right-0 p-3 opacity-[0.03] group-hover/card:scale-110 transition-transform">
@@ -276,23 +271,12 @@ const Dashboard: React.FC = () => {
                             </div>
                             <span className="text-xl font-black text-[#4A4E69] anime-title">{uniqueBreakdown.grammar}</span>
                         </div>
-                        <div className="pt-2 border-t border-[#4A4E69]/5">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black text-[#4A4E69]/40 uppercase">Unique Items</span>
-                                <span className="text-sm font-black text-[#4A4E69]">{uniqueBreakdown.vocab + uniqueBreakdown.kanji + uniqueBreakdown.grammar}</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
-                
-                <p className="text-[9px] font-bold text-[#4A4E69]/20 leading-relaxed px-2">
-                    Counting unique items reviewed across all sessions. Master them to fill your level bars!
-                </p>
             </div>
         </div>
       </div>
 
-      {/* Day Details Overlay */}
       {selectedDate && (
           <div className="fixed inset-0 z-[250] flex items-center justify-center p-6 bg-[#4A4E69]/30 backdrop-blur-md animate-soft-in">
               <div className="absolute inset-0" onClick={() => setSelectedDate(null)}></div>
@@ -324,9 +308,6 @@ const Dashboard: React.FC = () => {
                                   <div className="text-[9px] font-black text-[#4A4E69]/20 uppercase">Units Reviewed</div>
                               </div>
                           ))}
-                          <div className="pt-6 text-center">
-                              <p className="text-[10px] font-black text-[#4A4E69]/40 uppercase tracking-widest">Total Activity: {selectedDayData.count} points</p>
-                          </div>
                       </div>
                   ) : (
                       <div className="py-12 text-center opacity-30">
@@ -337,7 +318,6 @@ const Dashboard: React.FC = () => {
               </div>
           </div>
       )}
-      
       <div className="h-10"></div>
     </div>
   );

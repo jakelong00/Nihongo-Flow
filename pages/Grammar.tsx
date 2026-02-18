@@ -1,7 +1,6 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
-import { Plus, Search, Trash2, Edit2, Check, X, RotateCcw, GraduationCap, Sparkles, Trophy, ArrowUpDown } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, Check, X, RotateCcw, GraduationCap, Sparkles, Trophy, ArrowUpDown, Tag } from 'lucide-react';
 import { DataType, GrammarItem, LearningStage, ReviewResult } from '../types';
 import { STRINGS } from '../constants/strings';
 import { fuzzySearch } from '../utils/textHelper';
@@ -9,7 +8,7 @@ import { ShibaMascot } from '../components/ShibaMascot';
 import clsx from 'clsx';
 
 const EMPTY_FORM: Omit<GrammarItem, 'id'> = {
-  rule: '', explanation: '', examples: [''], jlpt: 'N5', chapter: '1'
+  rule: '', explanation: '', examples: [''], jlpt: 'N5', chapter: '1', source: ''
 };
 
 const Grammar: React.FC = () => {
@@ -20,6 +19,7 @@ const Grammar: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLevel, setFilterLevel] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [filterSource, setFilterSource] = useState('All');
   const [sortBy, setSortBy] = useState<'id' | 'mastery_asc' | 'mastery_desc'>('id');
   const [formData, setFormData] = useState<Omit<GrammarItem, 'id'>>(EMPTY_FORM);
 
@@ -36,6 +36,12 @@ const Grammar: React.FC = () => {
     if (sentinelRef.current) observer.observe(sentinelRef.current);
     return () => observer.disconnect();
   }, []);
+
+  const sources = useMemo(() => {
+    const s = new Set<string>();
+    grammarData.forEach(g => g.source && s.add(g.source));
+    return Array.from(s).sort();
+  }, [grammarData]);
 
   const handleEdit = (e: React.MouseEvent, item: GrammarItem) => {
     e.stopPropagation();
@@ -70,17 +76,18 @@ const Grammar: React.FC = () => {
 
   const filteredData = useMemo(() => {
     let data = grammarData.filter(g => {
-        const matchSearch = fuzzySearch(searchTerm, g.rule, g.explanation);
+        const matchSearch = fuzzySearch(searchTerm, g.rule, g.explanation, g.source);
         const matchLevel = filterLevel === 'All' || g.jlpt === filterLevel;
         const matchStatus = filterStatus === 'All' || getLearningStage(DataType.GRAMMAR, g.id) === filterStatus;
-        return matchSearch && matchLevel && matchStatus;
+        const matchSource = filterSource === 'All' || g.source === filterSource;
+        return matchSearch && matchLevel && matchStatus && matchSource;
     });
     return data.sort((a, b) => {
         if (sortBy === 'mastery_asc') return getMasteryPercentage(DataType.GRAMMAR, a.id) - getMasteryPercentage(DataType.GRAMMAR, b.id);
         if (sortBy === 'mastery_desc') return getMasteryPercentage(DataType.GRAMMAR, b.id) - getMasteryPercentage(DataType.GRAMMAR, a.id);
         return parseInt(b.id) - parseInt(a.id);
     });
-  }, [grammarData, searchTerm, filterLevel, filterStatus, sortBy, getMasteryPercentage, getLearningStage]);
+  }, [grammarData, searchTerm, filterLevel, filterStatus, filterSource, sortBy, getMasteryPercentage, getLearningStage]);
 
   const scrollToFilters = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -137,10 +144,29 @@ const Grammar: React.FC = () => {
                       <input value={formData.rule} onChange={e => setFormData({...formData, rule: e.target.value})} className="w-full p-4 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-2xl outline-none text-black font-black jp-text text-xl shadow-sm" required />
                   </div>
                   <div className="space-y-1">
-                      <label className="text-[9px) font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">JLPT Level</label>
+                      <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">JLPT Level</label>
                       <select value={formData.jlpt} onChange={e => setFormData({...formData, jlpt: e.target.value})} className="w-full p-4 bg-[#FAF9F6] rounded-2xl outline-none font-bold border border-[#4A4E69]/5 text-xs cursor-pointer">
                           {['N5','N4','N3','N2','N1'].map(n => <option key={n} value={n}>{n}</option>)}
                       </select>
+                  </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                      <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">Source / Textbook (Free Text)</label>
+                      <input 
+                        value={formData.source} 
+                        onChange={e => setFormData({...formData, source: e.target.value})} 
+                        className="w-full p-4 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-xl outline-none font-bold text-xs shadow-sm" 
+                        list="grammar-source-list" 
+                        placeholder="Type or select..."
+                      />
+                      <datalist id="grammar-source-list">
+                         {sources.map(s => <option key={s} value={s} />)}
+                      </datalist>
+                  </div>
+                  <div className="space-y-1">
+                      <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">Chapter</label>
+                      <input value={formData.chapter} onChange={e => setFormData({...formData, chapter: e.target.value})} className="w-full p-4 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-xl outline-none font-bold text-xs shadow-sm" />
                   </div>
               </div>
               <div className="space-y-1">
@@ -189,11 +215,12 @@ const Grammar: React.FC = () => {
         <div className="flex gap-4 flex-wrap items-center">
             {[
               { label: 'Level', val: filterLevel, set: setFilterLevel, opts: ['All', 'N5','N4','N3','N2','N1'] },
-              { label: 'Stat', val: filterStatus, set: setFilterStatus, opts: ['All', 'new', 'learning', 'review', 'mastered'] }
+              { label: 'Stat', val: filterStatus, set: setFilterStatus, opts: ['All', 'new', 'learning', 'review', 'mastered'] },
+              { label: 'Source', val: filterSource, set: setFilterSource, opts: ['All', ...sources] }
             ].map(f => (
                 <div key={f.label} className="bg-white border border-[#4A4E69]/5 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm hover:border-[#B4E4C3]/20 transition-all cursor-pointer">
                     <span className="text-[9px] font-black text-[#4A4E69]/30 uppercase tracking-[0.2em]">{f.label}</span>
-                    <select value={f.val} onChange={e => f.set(e.target.value)} className="bg-transparent outline-none font-black text-[#4A4E69] text-[10px] cursor-pointer">
+                    <select value={f.val} onChange={e => f.set(e.target.value)} className="bg-transparent outline-none font-black text-[#4A4E69] text-[10px] cursor-pointer max-w-[100px]">
                         {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                 </div>
@@ -218,7 +245,10 @@ const Grammar: React.FC = () => {
                         <span className="px-3 py-1 bg-[#FAF9F6] text-[#4A4E69]/30 rounded-full text-[9px] font-black uppercase border border-[#4A4E69]/5 tracking-widest">CH.{g.chapter}</span>
                         <h3 className="text-2xl font-black text-[#4A4E69] jp-text">{g.rule}</h3>
                     </div>
-                    <span className="px-3 py-1 bg-[#B4E4C3]/10 text-[#B4E4C3] rounded-full text-[9px] font-black border border-[#B4E4C3]/20 tracking-widest">{g.jlpt}</span>
+                    <div className="flex flex-col items-end gap-1.5">
+                        <span className="px-3 py-1 bg-[#B4E4C3]/10 text-[#4A4E69] rounded-full text-[9px] font-black border border-[#B4E4C3]/20 tracking-widest">{g.jlpt}</span>
+                        {g.source && <span className="text-[7px] font-black text-[#B4E4C3] bg-[#B4E4C3]/5 px-2 py-0.5 rounded border border-[#B4E4C3]/20 max-w-[100px] truncate">{g.source}</span>}
+                    </div>
                 </div>
                 <p className="text-[#4A4E69]/60 font-bold text-[13px] leading-relaxed mb-8">{g.explanation}</p>
                 {g.examples.length > 0 && (
@@ -252,7 +282,7 @@ const Grammar: React.FC = () => {
           <button onClick={scrollToFilters} className="w-12 h-12 bg-white text-[#78A2CC] rounded-full flex items-center justify-center border border-[#4A4E69]/5 hover:bg-[#78A2CC] hover:text-white transition-all"><Search size={20}/></button>
           <button onClick={handleOpenAdd} className="w-12 h-12 bg-white text-[#FFB7C5] rounded-full flex items-center justify-center border border-[#4A4E69]/5 hover:bg-[#FFB7C5] hover:text-white transition-all"><Plus size={20}/></button>
         </div>
-        <button onClick={() => setIsExpanded(!isExpanded)} className="w-14 h-14 rounded-full flex items-center justify-center text-white bg-[#B4E4C3] hover:bg-[#a3d9b4] border-b-4 border-[#93c7a3] active:scale-95 transition-all">
+        <button onClick={() => setIsExpanded(!isExpanded)} className="w-14 h-14 rounded-full flex items-center justify-center text-white bg-[#B4E4C3] hover:bg-[#a3d9b4] border-b-4 border-[#B4E4C3] active:scale-95 transition-all">
             {isExpanded ? <X size={28}/> : <Plus size={28}/>}
         </button>
       </div>

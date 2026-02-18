@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { 
   FileContextType, 
@@ -30,16 +29,16 @@ const FILE_NAMES = {
 };
 
 const SAMPLE_VOCAB: VocabItem[] = [
-  { id: '1', word: '猫', reading: 'ねこ', meaning: 'Cat', partOfSpeech: 'Noun', jlpt: 'N5', chapter: '1' },
-  { id: '2', word: '食べる', reading: 'たべる', meaning: 'To eat', partOfSpeech: 'Ichidan Verb', jlpt: 'N5', chapter: '2', te: '食べて', nai: '食べない', masu: '食べます', ta: '食べた', potential: '食べられる', volitional: '食べよう', passive: '食べられる', causative: '食べさせる' }
+  { id: '1', word: '猫', reading: 'ねこ', meaning: 'Cat', partOfSpeech: 'Noun', jlpt: 'N5', chapter: '1', source: 'Genki I' },
+  { id: '2', word: '食べる', reading: 'たべる', meaning: 'To eat', partOfSpeech: 'Ichidan Verb', jlpt: 'N5', chapter: '2', source: 'Genki I', te: '食べて', nai: '食べない', masu: '食べます', ta: '食べた', potential: '食べられる', volitional: '食べよう', passive: '食べられる', causative: '食べさせる' }
 ];
 
 const SAMPLE_KANJI: KanjiItem[] = [
-  { id: '1', character: '日', onyomi: 'ニチ, ジツ', kunyomi: 'ひ, -び', meaning: 'Day, Sun', jlpt: 'N5', strokes: '4', chapter: '1' }
+  { id: '1', character: '日', onyomi: 'ニチ, ジツ', kunyomi: 'ひ, -び', meaning: 'Day, Sun', jlpt: 'N5', strokes: '4', chapter: '1', source: 'Basic Kanji Vol. 1' }
 ];
 
 const SAMPLE_GRAMMAR: GrammarItem[] = [
-  { id: '1', rule: '〜は〜です', explanation: 'Topic marker (wa) and Copula (desu). Indicates X is Y.', examples: ['私は学生です。', 'これはペンです。'], jlpt: 'N5', chapter: '1' }
+  { id: '1', rule: '〜は〜です', explanation: 'Topic marker (wa) and Copula (desu). Indicates X is Y.', examples: ['私は学生です。', 'これはペンです。'], jlpt: 'N5', chapter: '1', source: 'Genki I' }
 ];
 
 const STORAGE_PREFIX = 'nihongo_flow_';
