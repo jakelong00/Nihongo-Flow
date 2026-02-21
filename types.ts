@@ -1,3 +1,4 @@
+
 export enum DataType {
   VOCAB = 'vocab',
   KANJI = 'kanji',
@@ -20,6 +21,7 @@ export interface VocabItem {
   jlpt: string;
   chapter: string;
   source?: string;
+  // Shared / Verb conjugations
   te?: string;
   nai?: string;
   masu?: string;
@@ -28,6 +30,11 @@ export interface VocabItem {
   volitional?: string;
   passive?: string;
   causative?: string;
+  // Adjective specific
+  pastNegative?: string;
+  adverbial?: string;
+  nounForm?: string;
+  conditional?: string;
 }
 
 export interface KanjiItem {

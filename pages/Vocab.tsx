@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { Plus, Search, Edit2, Trash2, Check, X, Book, RotateCcw, ArrowUpDown, Sparkles, ChevronDown, ChevronUp, Trophy, Tag } from 'lucide-react';
@@ -23,9 +24,20 @@ const VERB_FORMS = [
   { key: 'causative', label: 'Causative' }
 ];
 
+const ADJECTIVE_FORMS = [
+  { key: 'te', label: 'Te-form' },
+  { key: 'nai', label: 'Negative' },
+  { key: 'ta', label: 'Past Affirm.' },
+  { key: 'pastNegative', label: 'Past Neg.' },
+  { key: 'adverbial', label: 'Adverbial' },
+  { key: 'conditional', label: 'Conditional' },
+  { key: 'nounForm', label: 'Noun Form' }
+];
+
 const EMPTY_FORM: Omit<VocabItem, 'id'> = {
   word: '', reading: '', meaning: '', partOfSpeech: 'Noun', jlpt: 'N5', chapter: '1', source: '',
-  te: '', nai: '', masu: '', ta: '', potential: '', volitional: '', passive: '', causative: ''
+  te: '', nai: '', masu: '', ta: '', potential: '', volitional: '', passive: '', causative: '',
+  pastNegative: '', adverbial: '', nounForm: '', conditional: ''
 };
 
 const GRID_COLS = "grid-cols-[48px_1.4fr_0.9fr_1.3fr_110px_100px]";
@@ -134,13 +146,16 @@ const Vocab: React.FC = () => {
   }, [vocabData]);
 
   const isVerb = formData.partOfSpeech.toLowerCase().includes('verb');
+  const isAdjective = formData.partOfSpeech.toLowerCase().includes('adjective');
 
   const handleEdit = useCallback((e: React.MouseEvent, item: VocabItem) => {
     e.stopPropagation();
     setFormData({ ...EMPTY_FORM, ...item });
     setEditingId(item.id);
     setIsFormOpen(true);
-    setShowConjugations(!!(item.te || item.nai || item.masu || item.ta || item.potential || item.volitional || item.passive || item.causative));
+    // Check if any conjugation fields are filled
+    const hasConjugations = !!(item.te || item.nai || item.masu || item.ta || item.potential || item.volitional || item.passive || item.causative || item.pastNegative || item.adverbial || item.nounForm || item.conditional);
+    setShowConjugations(hasConjugations);
   }, []);
 
   const handleDelete = useCallback((e: React.MouseEvent, id: string) => {
@@ -182,6 +197,7 @@ const Vocab: React.FC = () => {
     setFormData(EMPTY_FORM);
     setIsFormOpen(true);
     setIsExpanded(false);
+    setShowConjugations(false);
   };
 
   const filteredData = useMemo(() => {
@@ -329,15 +345,16 @@ const Vocab: React.FC = () => {
                     </select>
                 </div>
               </div>
-              {isVerb && (
+              
+              {(isVerb || isAdjective) && (
                 <div className="border border-[#4A4E69]/5 rounded-[24px] bg-[#FAF9F6]/50 overflow-hidden">
                   <button type="button" onClick={() => setShowConjugations(!showConjugations)} className="w-full p-4 flex items-center justify-between text-[9px] font-black uppercase text-[#78A2CC]">
-                    <span>CONJUGATIONS</span>
+                    <span>{isVerb ? 'VERB CONJUGATIONS' : 'ADJECTIVE CONJUGATIONS'}</span>
                     {showConjugations ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
                   </button>
                   {showConjugations && (
                     <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 animate-soft-in">
-                      {VERB_FORMS.map(form => (
+                      {(isVerb ? VERB_FORMS : ADJECTIVE_FORMS).map(form => (
                         <div key={form.key} className="space-y-1">
                           <label className="text-[8px] font-black text-[#4A4E69]/30 uppercase ml-1">{form.label}</label>
                           <input value={(formData as any)[form.key] || ''} onChange={e => setFormData({...formData, [form.key]: e.target.value})} className="w-full p-2 bg-white border border-[#4A4E69]/5 rounded-lg outline-none text-[10px] font-bold jp-text" />
@@ -347,6 +364,7 @@ const Vocab: React.FC = () => {
                   )}
                 </div>
               )}
+
               {editingId && (
                 <div className="grid grid-cols-2 gap-4">
                   <button type="button" onClick={handleMarkMastered} className="flex items-center justify-center gap-2 py-3 bg-[#B4E4C3]/10 text-[#4A4E69] border border-[#B4E4C3]/30 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-[#B4E4C3] hover:text-white transition-all"><Trophy size={14} /> Mark Mastered</button>
