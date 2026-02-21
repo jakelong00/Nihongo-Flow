@@ -53,7 +53,9 @@ export interface GrammarItem {
   id: string;
   rule: string;
   explanation: string;
+  usageNotes?: string;
   examples: string[];
+  externalLinks?: { label: string; url: string }[];
   jlpt: string;
   chapter: string;
   source?: string;

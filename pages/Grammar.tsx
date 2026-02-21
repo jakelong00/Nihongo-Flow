@@ -1,6 +1,7 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
-import { Plus, Search, Trash2, Edit2, Check, X, RotateCcw, GraduationCap, Sparkles, Trophy, ArrowUpDown, Tag } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, Check, X, RotateCcw, GraduationCap, Sparkles, Trophy, ArrowUpDown, Tag, Info, ExternalLink } from 'lucide-react';
 import { DataType, GrammarItem, LearningStage, ReviewResult } from '../types';
 import { STRINGS } from '../constants/strings';
 import { fuzzySearch } from '../utils/textHelper';
@@ -8,7 +9,7 @@ import { ShibaMascot } from '../components/ShibaMascot';
 import clsx from 'clsx';
 
 const EMPTY_FORM: Omit<GrammarItem, 'id'> = {
-  rule: '', explanation: '', examples: [''], jlpt: 'N5', chapter: '1', source: ''
+  rule: '', explanation: '', usageNotes: '', examples: [''], externalLinks: [], jlpt: 'N5', chapter: '1', source: ''
 };
 
 const Grammar: React.FC = () => {
@@ -45,7 +46,12 @@ const Grammar: React.FC = () => {
 
   const handleEdit = (e: React.MouseEvent, item: GrammarItem) => {
     e.stopPropagation();
-    setFormData({ ...item, examples: item.examples.length > 0 ? item.examples : [''] });
+    setFormData({ 
+      ...item, 
+      examples: item.examples.length > 0 ? item.examples : [''],
+      usageNotes: item.usageNotes || '',
+      externalLinks: item.externalLinks || []
+    });
     setEditingId(item.id);
     setIsFormOpen(true);
   };
@@ -64,11 +70,19 @@ const Grammar: React.FC = () => {
     setFormData({ ...formData, examples: newExamples });
   };
 
+  const handleLinkChange = (index: number, field: 'label' | 'url', value: string) => {
+    const newLinks = [...(formData.externalLinks || [])];
+    newLinks[index] = { ...newLinks[index], [field]: value };
+    setFormData({ ...formData, externalLinks: newLinks });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanExamples = formData.examples.filter(ex => ex.trim() !== '');
-    if (editingId) await updateGrammar({ ...formData, id: editingId, examples: cleanExamples });
-    else await addGrammar({ ...formData, examples: cleanExamples });
+    const cleanLinks = (formData.externalLinks || []).filter(link => link.label.trim() !== '' && link.url.trim() !== '');
+    
+    if (editingId) await updateGrammar({ ...formData, id: editingId, examples: cleanExamples, externalLinks: cleanLinks });
+    else await addGrammar({ ...formData, examples: cleanExamples, externalLinks: cleanLinks });
     setFormData(EMPTY_FORM);
     setIsFormOpen(false);
     setEditingId(null);
@@ -76,7 +90,7 @@ const Grammar: React.FC = () => {
 
   const filteredData = useMemo(() => {
     let data = grammarData.filter(g => {
-        const matchSearch = fuzzySearch(searchTerm, g.rule, g.explanation, g.source);
+        const matchSearch = fuzzySearch(searchTerm, g.rule, g.explanation, g.source, g.usageNotes);
         const matchLevel = filterLevel === 'All' || g.jlpt === filterLevel;
         const matchStatus = filterStatus === 'All' || getLearningStage(DataType.GRAMMAR, g.id) === filterStatus;
         const matchSource = filterSource === 'All' || g.source === filterSource;
@@ -171,20 +185,42 @@ const Grammar: React.FC = () => {
               </div>
               <div className="space-y-1">
                   <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">Explanation</label>
-                  <textarea value={formData.explanation} onChange={e => setFormData({...formData, explanation: e.target.value})} className="w-full p-4 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-2xl outline-none font-bold text-sm h-24 shadow-sm" required />
+                  <textarea value={formData.explanation} onChange={e => setFormData({...formData, explanation: e.target.value})} className="w-full p-4 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-2xl outline-none font-bold text-sm h-24 shadow-sm" placeholder={STRINGS.grammar.placeholders.explanation} required />
+              </div>
+
+              <div className="space-y-1">
+                  <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">{STRINGS.grammar.usageNotesLabel}</label>
+                  <textarea value={formData.usageNotes} onChange={e => setFormData({...formData, usageNotes: e.target.value})} className="w-full p-4 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-2xl outline-none font-bold text-xs h-20 shadow-sm" placeholder={STRINGS.grammar.placeholders.usageNotes} />
               </div>
               
               <div className="space-y-3">
-                  <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">Examples</label>
+                  <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">{STRINGS.grammar.exampleLabel}</label>
                   {formData.examples.map((ex, idx) => (
                     <div key={idx} className="flex gap-2">
-                      <input value={ex} onChange={e => handleExampleChange(idx, e.target.value)} className="flex-1 p-3 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-xl outline-none font-bold jp-text text-xs" />
+                      <input value={ex} onChange={e => handleExampleChange(idx, e.target.value)} className="flex-1 p-3 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-xl outline-none font-bold jp-text text-xs" placeholder={STRINGS.grammar.placeholders.example} />
                       {formData.examples.length > 1 && (
                         <button type="button" onClick={() => setFormData({...formData, examples: formData.examples.filter((_, i) => i !== idx)})} className="p-3 bg-[#FFB7C5]/10 text-[#FFB7C5] rounded-xl hover:bg-[#FFB7C5] hover:text-white transition-all"><X size={14}/></button>
                       )}
                     </div>
                   ))}
-                  <button type="button" onClick={() => setFormData({...formData, examples: [...formData.examples, '']})} className="text-[9px] font-black uppercase text-[#78A2CC] tracking-widest hover:opacity-80 transition-all flex items-center gap-2">+ Add Example</button>
+                  <button type="button" onClick={() => setFormData({...formData, examples: [...formData.examples, '']})} className="text-[9px] font-black uppercase text-[#78A2CC] tracking-widest hover:opacity-80 transition-all flex items-center gap-2">+ {STRINGS.grammar.newExample}</button>
+              </div>
+
+              {/* EXTERNAL LINKS SECTION */}
+              <div className="space-y-3 pt-4 border-t border-[#4A4E69]/5">
+                  <label className="text-[9px] font-black text-[#4A4E69]/40 uppercase tracking-widest ml-1">{STRINGS.grammar.linksLabel}</label>
+                  {(formData.externalLinks || []).map((link, idx) => (
+                    <div key={idx} className="flex gap-2 items-end">
+                      <div className="flex-1 space-y-1">
+                        <input value={link.label} onChange={e => handleLinkChange(idx, 'label', e.target.value)} className="w-full p-3 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-xl outline-none font-bold text-[10px]" placeholder={STRINGS.grammar.placeholders.linkLabel} />
+                      </div>
+                      <div className="flex-[2] space-y-1">
+                        <input value={link.url} onChange={e => handleLinkChange(idx, 'url', e.target.value)} className="w-full p-3 bg-[#FAF9F6] border border-[#4A4E69]/5 rounded-xl outline-none font-bold text-[10px]" placeholder={STRINGS.grammar.placeholders.linkUrl} />
+                      </div>
+                      <button type="button" onClick={() => setFormData({...formData, externalLinks: (formData.externalLinks || []).filter((_, i) => i !== idx)})} className="p-3 bg-[#FFB7C5]/10 text-[#FFB7C5] rounded-xl hover:bg-[#FFB7C5] hover:text-white transition-all"><X size={14}/></button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setFormData({...formData, externalLinks: [...(formData.externalLinks || []), { label: '', url: '' }]})} className="text-[9px] font-black uppercase text-[#78A2CC] tracking-widest hover:opacity-80 transition-all flex items-center gap-2">+ {STRINGS.grammar.newLink}</button>
               </div>
 
               {editingId && (
@@ -250,14 +286,48 @@ const Grammar: React.FC = () => {
                         {g.source && <span className="text-[7px] font-black text-[#B4E4C3] bg-[#B4E4C3]/5 px-2 py-0.5 rounded border border-[#B4E4C3]/20 max-w-[100px] truncate">{g.source}</span>}
                     </div>
                 </div>
-                <p className="text-[#4A4E69]/60 font-bold text-[13px] leading-relaxed mb-8">{g.explanation}</p>
-                {g.examples.length > 0 && (
-                    <div className="bg-[#FAF9F6] p-6 rounded-3xl border border-[#4A4E69]/5 space-y-3 mb-6 flex-1 shadow-inner">
-                        {g.examples.slice(0, 3).map((ex, i) => (
-                            <p key={i} className="text-[13px] font-bold text-[#4A4E69] jp-text flex gap-3"><span className="opacity-20 text-[11px] font-black">{i+1}</span> {ex}</p>
-                        ))}
-                    </div>
-                )}
+                <div className="space-y-4 mb-8 flex-1">
+                    <p className="text-[#4A4E69]/60 font-bold text-[13px] leading-relaxed whitespace-pre-wrap">{g.explanation}</p>
+                    
+                    {g.usageNotes && (
+                        <div className="p-4 bg-[#78A2CC]/5 border-l-4 border-[#78A2CC]/30 rounded-r-2xl">
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <Info size={12} className="text-[#78A2CC]" />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-[#78A2CC]/60">{STRINGS.grammar.usageNotesLabel}</span>
+                            </div>
+                            <p className="text-[11px] font-bold text-[#4A4E69]/70 leading-relaxed whitespace-pre-wrap italic">
+                                {g.usageNotes}
+                            </p>
+                        </div>
+                    )}
+
+                    {g.examples.length > 0 && (
+                        <div className="bg-[#FAF9F6] p-6 rounded-3xl border border-[#4A4E69]/5 space-y-3 shadow-inner">
+                            {g.examples.slice(0, 3).map((ex, i) => (
+                                <p key={i} className="text-[13px] font-bold text-[#4A4E69] jp-text flex gap-3"><span className="opacity-20 text-[11px] font-black">{i+1}</span> {ex}</p>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* RENDER EXTERNAL LINKS IN CARD */}
+                    {(g.externalLinks && g.externalLinks.length > 0) && (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          {g.externalLinks.map((link, i) => (
+                            <a 
+                              key={i} 
+                              href={link.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#FAF9F6] border border-[#4A4E69]/10 rounded-xl text-[10px] font-black text-[#4A4E69]/60 hover:text-[#78A2CC] hover:border-[#78A2CC]/30 transition-all shadow-sm"
+                            >
+                              <ExternalLink size={10} />
+                              {link.label}
+                            </a>
+                          ))}
+                        </div>
+                    )}
+                </div>
+                
                 <div className="mt-auto pt-8 border-t border-[#4A4E69]/5 flex items-center justify-between">
                     <div className="flex-1 max-w-[120px]">
                         <div className="text-[8px] font-black text-[#4A4E69]/20 uppercase tracking-[0.2em] mb-2">{mastery}% Mastery</div>

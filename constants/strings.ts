@@ -1,8 +1,9 @@
+
 export const STRINGS = {
   common: {
     appName: "Nihongo Flow",
     appSubtitle: "Learning Engine",
-    version: "v1.2.1 DEPLOYED",
+    version: "v1.2.2 STABLE",
     loading: "Initializing dojo...",
     cancel: "Cancel",
     save: "Save Changes",
@@ -27,7 +28,7 @@ export const STRINGS = {
   },
   home: {
     title: "Nihongo Flow",
-    subtitle: "Local Study Dojo v1.2.1",
+    subtitle: "Local Study Dojo v1.2.2",
     syncBtn: "Sync Local Folder",
     guestBtn: "Guest Storage",
     syncNote: "Recommended for persistence",
@@ -88,10 +89,16 @@ export const STRINGS = {
     addBtn: "ADD RULE",
     exampleLabel: "EXAMPLES",
     newExample: "NEW EXAMPLE",
+    usageNotesLabel: "USAGE NOTES",
+    linksLabel: "EXTERNAL LINKS (Bunpro, WaniKani, etc.)",
+    newLink: "ADD RESOURCE LINK",
     placeholders: {
       rule: "〜てもいい",
-      explanation: "Usage details...",
-      example: "Sample sentence..."
+      explanation: "Primary meaning of the rule...",
+      usageNotes: "Special nuances, formality, or context...",
+      example: "Sample sentence...",
+      linkLabel: "Site Name (e.g. Bunpro)",
+      linkUrl: "URL (https://...)"
     }
   },
   review: {

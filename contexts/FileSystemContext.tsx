@@ -40,7 +40,7 @@ const SAMPLE_KANJI: KanjiItem[] = [
 ];
 
 const SAMPLE_GRAMMAR: GrammarItem[] = [
-  { id: '1', rule: '〜は〜です', explanation: 'Topic marker (wa) and Copula (desu). Indicates X is Y.', examples: ['私は学生です。', 'これはペンです。'], jlpt: 'N5', chapter: '1', source: 'Genki I' }
+  { id: '1', rule: '〜は〜です', explanation: 'Topic marker (wa) and Copula (desu). Indicates X is Y.', usageNotes: 'Used in formal and neutral contexts. In informal speech, desu becomes da.', examples: ['私は学生です。', 'これはペンです。'], externalLinks: [{ label: 'Bunpro', url: 'https://bunpro.jp/grammar_points/1' }], jlpt: 'N5', chapter: '1', source: 'Genki I' }
 ];
 
 const STORAGE_PREFIX = 'nihongo_flow_';
@@ -90,7 +90,23 @@ export const FileProvider: React.FC<{ children: React.ReactNode }> = ({ children
                       examples = item.example ? [item.example] : [];
                   }
               }
-              return { ...item, examples: Array.isArray(examples) ? examples : [] };
+
+              let externalLinks = item.externalLinks;
+              if (typeof externalLinks === 'string' && externalLinks.trim() !== '') {
+                try {
+                    externalLinks = JSON.parse(externalLinks);
+                } catch (e) {
+                    externalLinks = [];
+                }
+              } else if (!externalLinks) {
+                  externalLinks = [];
+              }
+
+              return { 
+                ...item, 
+                examples: Array.isArray(examples) ? examples : [],
+                externalLinks: Array.isArray(externalLinks) ? externalLinks : []
+              };
           }) as unknown as T[];
       }
       return data as T[];
