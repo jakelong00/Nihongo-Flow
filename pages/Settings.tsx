@@ -10,13 +10,24 @@ const Settings: React.FC = () => {
   const { resetDirectory, vocabData, kanjiData, grammarData, statsData } = useFileSystem();
 
   const handleBackup = () => {
-    const csv = toCSV(vocabData);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `vocab_backup_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
+    const today = new Date().toISOString().split('T')[0];
+    
+    const downloadFile = (data: any[], filename: string) => {
+      const csv = toCSV(data);
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}_backup_${today}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    downloadFile(vocabData, 'vocab');
+    downloadFile(kanjiData, 'kanji');
+    downloadFile(grammarData, 'grammar');
   };
 
   return (
