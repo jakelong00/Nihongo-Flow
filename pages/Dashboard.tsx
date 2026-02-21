@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useState } from 'react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { DataType } from '../types';
@@ -38,7 +39,7 @@ const Dashboard: React.FC = () => {
     { name: 'GRAMMAR', total: grammarData.length, learned: getMastery(DataType.GRAMMAR), color: '#B4E4C3', jp: '文' },
   ];
 
-  const { weeks, currentStreak, uniqueBreakdown, activityData } = useMemo(() => {
+  const { months, currentStreak, uniqueBreakdown } = useMemo(() => {
     const counts: Record<string, number> = {};
     const detailedCounts: Record<string, Record<DataType, number>> = {};
     const uniqueItems: Record<DataType, Set<string>> = {
@@ -59,23 +60,6 @@ const Dashboard: React.FC = () => {
       uniqueItems[stat.category].add(stat.itemId);
     });
 
-    const days = [];
-    const today = new Date();
-    // 52 weeks + current week
-    for (let i = 371; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      days.push({
-        date: dateStr,
-        count: counts[dateStr] || 0,
-        dayOfWeek: d.getDay(),
-        month: d.toLocaleString('default', { month: 'short' }),
-        monthStart: d.getDate() === 1,
-        details: detailedCounts[dateStr] || null
-      });
-    }
-
     // Calculate Streak
     let streak = 0;
     const sortedDates = Object.keys(counts).sort().reverse();
@@ -92,25 +76,59 @@ const Dashboard: React.FC = () => {
         }
     }
 
-    const resultWeeks = [];
-    let currentWeek = [];
-    // Pad first week
-    const firstDay = days.length > 0 ? days[0].dayOfWeek : 0;
-    for (let i = 0; i < firstDay; i++) {
-      currentWeek.push(null);
+    // Group into 12 months
+    const today = new Date();
+    const resultMonths = [];
+
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const monthName = d.toLocaleString('default', { month: 'short' });
+        const monthYear = d.getFullYear();
+        
+        const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+        const firstDayOfWeek = d.getDay(); // 0 (Sun) to 6 (Sat)
+        
+        const monthDays = [];
+        // Add padding for the first week
+        for (let p = 0; p < firstDayOfWeek; p++) {
+            monthDays.push(null);
+        }
+        
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateObj = new Date(d.getFullYear(), d.getMonth(), day);
+            const dateStr = dateObj.toISOString().split('T')[0];
+            monthDays.push({
+                date: dateStr,
+                count: counts[dateStr] || 0,
+                details: detailedCounts[dateStr] || null
+            });
+        }
+
+        // Split into weeks (columns)
+        const monthWeeks = [];
+        let currentWeek = [];
+        for (const day of monthDays) {
+            currentWeek.push(day);
+            if (currentWeek.length === 7) {
+                monthWeeks.push(currentWeek);
+                currentWeek = [];
+            }
+        }
+        if (currentWeek.length > 0) {
+            // Pad end of last week
+            while (currentWeek.length < 7) currentWeek.push(null);
+            monthWeeks.push(currentWeek);
+        }
+
+        resultMonths.push({
+            name: monthName,
+            year: monthYear,
+            weeks: monthWeeks
+        });
     }
-    for (const day of days) {
-      currentWeek.push(day);
-      if (currentWeek.length === 7) {
-        resultWeeks.push(currentWeek);
-        currentWeek = [];
-      }
-    }
-    if (currentWeek.length > 0) resultWeeks.push(currentWeek);
 
     return { 
-        activityData: days, 
-        weeks: resultWeeks, 
+        months: resultMonths,
         currentStreak: streak,
         uniqueBreakdown: {
             vocab: uniqueItems[DataType.VOCAB].size,
@@ -129,8 +147,15 @@ const Dashboard: React.FC = () => {
 
   const selectedDayData = useMemo(() => {
     if (!selectedDate) return null;
-    return activityData.find(d => d.date === selectedDate);
-  }, [selectedDate, activityData]);
+    // Search across all months
+    for (const m of months) {
+        for (const w of m.weeks) {
+            const found = w.find(d => d?.date === selectedDate);
+            if (found) return found;
+        }
+    }
+    return null;
+  }, [selectedDate, months]);
 
   return (
     <div className="p-7 md:p-11 pt-28 md:pt-36 max-w-7xl mx-auto space-y-10 animate-soft-in">
@@ -204,39 +229,34 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                    <div className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-6">
-                        {weeks.map((week, wIdx) => {
-                          const firstValidDay = week.find(d => d !== null);
-                          const showMonth = firstValidDay?.monthStart || (wIdx === 0 && firstValidDay);
-                          
-                          return (
-                            <div key={wIdx} className="flex flex-col gap-1.5 min-w-max">
-                                <div className="h-4 flex items-end">
-                                   {showMonth && (
-                                     <span className="text-[8px] font-black text-[#4A4E69]/40 uppercase tracking-tighter">
-                                       {firstValidDay.month}
-                                     </span>
-                                   )}
-                                </div>
-                                {week.map((day, dIdx) => (
-                                <button 
-                                    key={dIdx}
-                                    onClick={() => day && setSelectedDate(day.date)}
-                                    title={day ? `${day.date}: ${day.count} activities` : ''}
-                                    className={clsx(
-                                    "w-3.5 h-3.5 rounded-sm transition-all duration-300 hover:scale-150 hover:z-10",
-                                    day ? getColorClass(day.count) : "bg-transparent",
-                                    selectedDate === day?.date ? "ring-2 ring-offset-2 ring-[#78A2CC] scale-125 z-10" : "",
-                                    !isLoaded && "opacity-0 translate-y-2"
-                                    )}
-                                    style={{ transitionDelay: isLoaded ? `${(wIdx + dIdx) * 0.005}s` : '0s' }}
-                                />
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                    {months.map((month, mIdx) => (
+                        <div key={`${month.name}-${month.year}`} className="bg-[#FAF9F6] p-3.5 rounded-2xl border border-[#4A4E69]/5 hover:shadow-md transition-all animate-soft-in flex flex-col items-center shrink-0" style={{ animationDelay: `${mIdx * 0.05}s` }}>
+                            <div className="flex items-center justify-between w-full mb-2.5">
+                                <span className="text-[9px] font-black text-[#4A4E69] uppercase tracking-widest">{month.name}</span>
+                                <span className="text-[8px] font-black text-[#4A4E69]/20">{month.year}</span>
+                            </div>
+                            <div className="flex gap-1">
+                                {month.weeks.map((week, wIdx) => (
+                                    <div key={wIdx} className="flex flex-col gap-1">
+                                        {week.map((day, dIdx) => (
+                                            <button 
+                                                key={dIdx}
+                                                onClick={() => day && setSelectedDate(day.date)}
+                                                title={day ? `${day.date}: ${day.count} activities` : ''}
+                                                disabled={!day}
+                                                className={clsx(
+                                                    "w-2.5 h-2.5 rounded-sm transition-all duration-300",
+                                                    day ? [getColorClass(day.count), "hover:scale-125 hover:z-10 cursor-pointer"] : "bg-transparent",
+                                                    selectedDate === day?.date ? "ring-2 ring-[#78A2CC] scale-110 z-10" : ""
+                                                )}
+                                            />
+                                        ))}
+                                    </div>
                                 ))}
                             </div>
-                          );
-                        })}
-                    </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 

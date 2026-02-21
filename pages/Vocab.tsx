@@ -71,10 +71,13 @@ const VocabItemRow = React.memo(({
           </div>
           <div className="overflow-hidden min-w-0">
               <div className="text-xl font-black text-[#4A4E69] jp-text truncate mb-0.5 leading-tight">{item.word}</div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <div className="text-[10px] font-bold text-[#4A4E69]/30 jp-text truncate uppercase tracking-wider">{item.reading}</div>
+                <span className="text-[7px] font-black text-[#78A2CC] border border-[#78A2CC]/20 bg-[#78A2CC]/5 px-1.5 py-0.5 rounded uppercase tracking-tighter shadow-sm">
+                  {item.jlpt}
+                </span>
                 {item.source && (
-                   <span className="text-[7px] font-black text-[#78A2CC]/50 uppercase tracking-tighter bg-[#78A2CC]/5 px-1.5 rounded truncate">
+                   <span className="text-[7px] font-black text-[#FFB7C5] border border-[#FFB7C5]/20 bg-[#FFB7C5]/5 px-1.5 py-0.5 rounded uppercase tracking-tighter shadow-sm truncate max-w-[80px]">
                      {item.source}
                    </span>
                 )}
