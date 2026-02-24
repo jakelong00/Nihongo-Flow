@@ -18,14 +18,28 @@ export const KanjiCanvas: React.FC<KanjiCanvasProps> = ({ onClear }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size based on container
     const resizeCanvas = () => {
       const container = canvas.parentElement;
       if (container) {
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
+        // Save current content before resizing
+        const temp = canvas.toDataURL();
         
-        // Reset context properties after resize
+        const newWidth = container.clientWidth;
+        const newHeight = container.clientHeight;
+        
+        if (canvas.width !== newWidth || canvas.height !== newHeight) {
+          canvas.width = newWidth;
+          canvas.height = newHeight;
+          
+          // Restore content scaled to new size
+          const img = new Image();
+          img.src = temp;
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, newWidth, newHeight);
+          };
+        }
+        
+        // Reset context properties after resize (they are lost when width/height change)
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.lineWidth = 6;
@@ -33,10 +47,20 @@ export const KanjiCanvas: React.FC<KanjiCanvasProps> = ({ onClear }) => {
       }
     };
 
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    // Use ResizeObserver for more reliable size tracking than just window resize
+    const resizeObserver = new ResizeObserver(() => {
+      resizeCanvas();
+    });
 
-    return () => window.removeEventListener('resize', resizeCanvas);
+    if (canvas.parentElement) {
+      resizeObserver.observe(canvas.parentElement);
+    }
+
+    resizeCanvas();
+
+    return () => {
+      resizeObserver.disconnect();
+    };
   }, []);
 
   const getCoordinates = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent): { x: number; y: number } | null => {
@@ -46,21 +70,33 @@ export const KanjiCanvas: React.FC<KanjiCanvasProps> = ({ onClear }) => {
     const rect = canvas.getBoundingClientRect();
     let clientX, clientY;
 
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
+    if ('touches' in e || 'changedTouches' in e) {
+      const touchEvent = e as any;
+      const touch = touchEvent.touches?.[0] || touchEvent.changedTouches?.[0];
+      if (!touch) return null;
+      clientX = touch.clientX;
+      clientY = touch.clientY;
     } else {
       clientX = (e as MouseEvent).clientX;
       clientY = (e as MouseEvent).clientY;
     }
 
+    // Account for scaling between CSS pixels and internal canvas resolution
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
     };
   };
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e) {
+      // Prevent scrolling on touch devices
+      if (e.cancelable) e.preventDefault();
+    }
+
     const coords = getCoordinates(e);
     if (!coords) return;
 
@@ -80,6 +116,12 @@ export const KanjiCanvas: React.FC<KanjiCanvasProps> = ({ onClear }) => {
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isDrawing) return;
+    
+    if ('touches' in e) {
+      // Prevent scrolling on touch devices
+      if (e.cancelable) e.preventDefault();
+    }
+
     const coords = getCoordinates(e);
     if (!coords) return;
 
@@ -88,6 +130,10 @@ export const KanjiCanvas: React.FC<KanjiCanvasProps> = ({ onClear }) => {
 
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
+    
+    // Start a new path from the current point to keep segments short and efficient
+    ctx.beginPath();
+    ctx.moveTo(coords.x, coords.y);
   };
 
   const stopDrawing = () => {
