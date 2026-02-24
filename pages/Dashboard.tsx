@@ -187,19 +187,21 @@ const Dashboard: React.FC = () => {
         {stats.map((stat, idx) => {
           const masteryPercent = Math.round((stat.learned / (stat.total || 1)) * 100);
           return (
-            <div key={stat.name} className="bg-white border border-[#4A4E69]/5 p-10 rounded-[48px] shadow-sm hover:shadow-xl transition-all duration-500 group hover:-translate-y-2 overflow-hidden relative" style={{ animationDelay: `${idx * 0.1}s` }}>
+            <div key={stat.name} className="bg-white border border-[#4A4E69]/5 p-8 md:p-10 rounded-[48px] shadow-sm hover:shadow-xl transition-all duration-500 group hover:-translate-y-2 overflow-hidden relative" style={{ animationDelay: `${idx * 0.1}s` }}>
               <div className="absolute right-4 top-4 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity pointer-events-none">
-                <span className="text-[140px] font-black jp-text leading-none select-none">{stat.jp}</span>
+                <span className="text-[120px] md:text-[140px] font-black jp-text leading-none select-none">{stat.jp}</span>
               </div>
-              <div className="flex justify-between items-start mb-12 relative z-10">
+              <div className="flex justify-between items-start mb-10 md:mb-12 relative z-10">
                   <h3 className="anime-title text-[10px] font-black text-[#4A4E69]/30 uppercase tracking-[0.25em]">{stat.name}</h3>
-                  <span className="text-[9px] font-black anime-title text-[#4A4E69]/40 bg-[#FAF9F6] px-3 py-1.5 rounded-full border border-[#4A4E69]/5">{stat.total} ITEMS</span>
+                  <span className="text-[9px] font-black anime-title text-[#4A4E69]/40 bg-[#FAF9F6] px-3 py-1.5 rounded-full border border-[#4A4E69]/5">{stat.total} {stat.total === 1 ? 'ITEM' : 'ITEMS'}</span>
               </div>
-              <div className="flex items-baseline gap-2 mb-10 relative z-10">
-                  <span className="text-7xl font-black text-[#4A4E69] anime-title tracking-tighter">
-                      {isLoaded ? masteryPercent : '0'}<span className="text-2xl opacity-30 ml-1">%</span>
-                  </span>
-                  <span className="text-[11px] font-black anime-title text-[#4A4E69]/30 uppercase tracking-[0.2em] ml-2">MASTERY</span>
+              <div className="flex flex-col mb-8 md:mb-10 relative z-10">
+                  <div className="flex items-baseline gap-2">
+                      <span className="text-6xl md:text-7xl font-black text-[#4A4E69] anime-title tracking-tighter leading-none">
+                          {isLoaded ? masteryPercent : '0'}<span className="text-xl md:text-2xl opacity-30 ml-1">%</span>
+                      </span>
+                  </div>
+                  <span className="text-[10px] md:text-[11px] font-black anime-title text-[#4A4E69]/30 uppercase tracking-[0.2em] mt-3">MASTERY</span>
               </div>
               <div className="w-full bg-[#FAF9F6] h-1.5 rounded-full overflow-hidden shadow-inner relative z-10">
                   <div 
@@ -273,21 +275,21 @@ const Dashboard: React.FC = () => {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <BookOpen size={12} className="text-[#78A2CC]" />
-                                <span className="text-[11px] font-bold text-[#4A4E69]/60">Vocab</span>
+                                <span className="text-[10px] font-black text-[#4A4E69]/60 uppercase tracking-wider">Vocabulary</span>
                             </div>
                             <span className="text-xl font-black text-[#4A4E69] anime-title">{uniqueBreakdown.vocab}</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Languages size={12} className="text-[#FFB7C5]" />
-                                <span className="text-[11px] font-bold text-[#4A4E69]/60">Kanji</span>
+                                <span className="text-[10px] font-black text-[#4A4E69]/60 uppercase tracking-wider">Kanji Dojo</span>
                             </div>
                             <span className="text-xl font-black text-[#4A4E69] anime-title">{uniqueBreakdown.kanji}</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <GraduationCap size={12} className="text-[#B4E4C3]" />
-                                <span className="text-[11px] font-bold text-[#4A4E69]/60">Grammar</span>
+                                <span className="text-[10px] font-black text-[#4A4E69]/60 uppercase tracking-wider">Grammar</span>
                             </div>
                             <span className="text-xl font-black text-[#4A4E69] anime-title">{uniqueBreakdown.grammar}</span>
                         </div>
@@ -316,9 +318,9 @@ const Dashboard: React.FC = () => {
                   {selectedDayData?.details ? (
                       <div className="space-y-4">
                           {[
-                              { label: 'Vocabulary', count: selectedDayData.details[DataType.VOCAB], icon: 'Book', color: 'bg-[#78A2CC]/10 text-[#78A2CC]' },
-                              { label: 'Kanji Dojo', count: selectedDayData.details[DataType.KANJI], icon: 'Languages', color: 'bg-[#FFB7C5]/10 text-[#FFB7C5]' },
-                              { label: 'Grammar', count: selectedDayData.details[DataType.GRAMMAR], icon: 'GraduationCap', color: 'bg-[#B4E4C3]/10 text-[#B4E4C3]' }
+                              { label: 'VOCABULARY', count: selectedDayData.details[DataType.VOCAB], icon: 'Book', color: 'bg-[#78A2CC]/10 text-[#78A2CC]' },
+                              { label: 'KANJI DOJO', count: selectedDayData.details[DataType.KANJI], icon: 'Languages', color: 'bg-[#FFB7C5]/10 text-[#FFB7C5]' },
+                              { label: 'GRAMMAR', count: selectedDayData.details[DataType.GRAMMAR], icon: 'GraduationCap', color: 'bg-[#B4E4C3]/10 text-[#B4E4C3]' }
                           ].map(row => (
                               <div key={row.label} className="flex items-center justify-between p-4 bg-[#FAF9F6] rounded-2xl border border-[#4A4E69]/5">
                                   <div className="flex items-center gap-3">
