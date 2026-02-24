@@ -13,30 +13,31 @@ const POS_OPTIONS = [
 ];
 
 const VERB_FORMS = [
-  { key: 'te', label: 'Te-form' },
-  { key: 'nai', label: 'Nai-form' },
-  { key: 'masu', label: 'Masu-form' },
-  { key: 'ta', label: 'Ta-form (Past)' },
-  { key: 'potential', label: 'Potential' },
-  { key: 'volitional', label: 'Volitional' },
-  { key: 'passive', label: 'Passive' },
-  { key: 'causative', label: 'Causative' }
+  { key: 'v_masu', label: 'Masu-form' },
+  { key: 'v_short_pres_pos', label: 'Short (Pres. +)' },
+  { key: 'v_short_pres_neg', label: 'Short (Pres. -)' },
+  { key: 'v_short_past_pos', label: 'Short (Past +)' },
+  { key: 'v_short_past_neg', label: 'Short (Past -)' },
+  { key: 'v_potential', label: 'Potential' },
+  { key: 'v_volitional', label: 'Volitional' },
+  { key: 'v_passive', label: 'Passive' },
+  { key: 'v_causative', label: 'Causative' }
 ];
 
 const ADJECTIVE_FORMS = [
-  { key: 'te', label: 'Te-form' },
-  { key: 'nai', label: 'Negative' },
-  { key: 'ta', label: 'Past Affirm.' },
-  { key: 'pastNegative', label: 'Past Neg.' },
-  { key: 'adverbial', label: 'Adverbial' },
-  { key: 'conditional', label: 'Conditional' },
-  { key: 'nounForm', label: 'Noun Form' }
+  { key: 'a_te', label: 'Te-form' },
+  { key: 'a_nai', label: 'Negative' },
+  { key: 'a_ta', label: 'Past Affirm.' },
+  { key: 'a_pastNegative', label: 'Past Neg.' },
+  { key: 'a_adverbial', label: 'Adverbial' },
+  { key: 'a_conditional', label: 'Conditional' },
+  { key: 'a_nounForm', label: 'Noun Form' }
 ];
 
 const EMPTY_FORM: Omit<VocabItem, 'id'> = {
   word: '', reading: '', meaning: '', partOfSpeech: 'Noun', jlpt: 'N5', chapter: '1', source: '',
-  te: '', nai: '', masu: '', ta: '', potential: '', volitional: '', passive: '', causative: '',
-  pastNegative: '', adverbial: '', nounForm: '', conditional: ''
+  v_masu: '', v_short_pres_pos: '', v_short_pres_neg: '', v_short_past_pos: '', v_short_past_neg: '', v_potential: '', v_volitional: '', v_passive: '', v_causative: '',
+  a_te: '', a_nai: '', a_ta: '', a_pastNegative: '', a_adverbial: '', a_nounForm: '', a_conditional: ''
 };
 
 const GRID_COLS = "grid-cols-[48px_1.4fr_0.9fr_1.3fr_110px_100px]";

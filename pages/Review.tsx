@@ -20,24 +20,25 @@ interface SessionLogEntry {
 }
 
 const VERB_FORM_MAP: Record<string, string> = {
-  te: 'Te-form',
-  nai: 'Negative (Nai)',
-  masu: 'Polite (Masu)',
-  ta: 'Past (Ta)',
-  potential: 'Potential',
-  volitional: 'Volitional',
-  passive: 'Passive',
-  causative: 'Causative'
+  v_masu: 'Masu-form',
+  v_short_pres_pos: 'Short Form (Pres. +)',
+  v_short_pres_neg: 'Short Form (Pres. -)',
+  v_short_past_pos: 'Short Form (Past +)',
+  v_short_past_neg: 'Short Form (Past -)',
+  v_potential: 'Potential',
+  v_volitional: 'Volitional',
+  v_passive: 'Passive',
+  v_causative: 'Causative'
 };
 
 const ADJ_FORM_MAP: Record<string, string> = {
-  te: 'Te-form',
-  nai: 'Negative',
-  ta: 'Past Affirmative',
-  pastNegative: 'Past Negative',
-  adverbial: 'Adverbial',
-  conditional: 'Conditional',
-  nounForm: 'Noun Form'
+  a_te: 'Te-form',
+  a_nai: 'Negative',
+  a_ta: 'Past Affirmative',
+  a_pastNegative: 'Past Negative',
+  a_adverbial: 'Adverbial',
+  a_conditional: 'Conditional',
+  a_nounForm: 'Noun Form'
 };
 
 const Review: React.FC = () => {
@@ -131,7 +132,7 @@ const Review: React.FC = () => {
     if (mode === 'conjugator') {
       pool = vocabData
         .filter(v => (v.partOfSpeech.toLowerCase().includes('verb') || v.partOfSpeech.toLowerCase().includes('adjective')))
-        .filter(v => !!(v.te || v.nai || v.masu || v.ta || v.potential || v.volitional || v.passive || v.causative || v.pastNegative || v.adverbial || v.nounForm || v.conditional))
+        .filter(v => !!(v.v_masu || v.v_short_pres_pos || v.v_short_pres_neg || v.v_short_past_pos || v.v_short_past_neg || v.v_potential || v.v_volitional || v.v_passive || v.v_causative || v.a_te || v.a_nai || v.a_ta || v.a_pastNegative || v.a_adverbial || v.a_nounForm || v.a_conditional))
         .map(i => ({ ...i, type: DataType.VOCAB }));
     } else {
       if (activeTypes.includes(DataType.VOCAB)) pool = [...pool, ...vocabData.map(i => ({ ...i, type: DataType.VOCAB }))];
@@ -637,9 +638,26 @@ const Review: React.FC = () => {
                 {/* Back Side - Rotating in opposite direction */}
                 <div className="absolute top-0 left-0 w-full h-full backface-hidden rotate-y-minus-180 flex flex-col items-center justify-center p-8 bg-[#78A2CC] border border-[#4A4E69]/10 rounded-[40px] shadow-2xl overflow-hidden">
                     <div className="w-full text-center space-y-6 relative z-10 text-white animate-soft-in">
-                        {'reading' in item && (
+                        {/* Readings for Vocab or Kanji */}
+                        {item.type === DataType.VOCAB && 'reading' in item && (
                             <div className="bg-white/10 p-4 rounded-[24px] border border-white/20 inline-block mb-2">
                                 <p className="text-2xl md:text-4xl font-black jp-text tracking-tighter">{item.reading}</p>
+                            </div>
+                        )}
+                        {item.type === DataType.KANJI && (
+                            <div className="flex flex-wrap justify-center gap-3 mb-2">
+                                {(item as KanjiItem).onyomi && (
+                                    <div className="bg-white/10 p-3 rounded-2xl border border-white/20 min-w-[100px]">
+                                        <span className="text-[8px] font-black uppercase tracking-widest block opacity-60 mb-1">On-yomi</span>
+                                        <p className="text-xl md:text-2xl font-black jp-text">{(item as KanjiItem).onyomi}</p>
+                                    </div>
+                                )}
+                                {(item as KanjiItem).kunyomi && (
+                                    <div className="bg-white/10 p-3 rounded-2xl border border-white/20 min-w-[100px]">
+                                        <span className="text-[8px] font-black uppercase tracking-widest block opacity-60 mb-1">Kun-yomi</span>
+                                        <p className="text-xl md:text-2xl font-black jp-text">{(item as KanjiItem).kunyomi}</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                         <div className="px-2 max-h-[250px] overflow-y-auto custom-scrollbar">

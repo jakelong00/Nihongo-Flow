@@ -21,20 +21,24 @@ export interface VocabItem {
   jlpt: string;
   chapter: string;
   source?: string;
-  // Shared / Verb conjugations
-  te?: string;
-  nai?: string;
-  masu?: string;
-  ta?: string;
-  potential?: string;
-  volitional?: string;
-  passive?: string;
-  causative?: string;
-  // Adjective specific
-  pastNegative?: string;
-  adverbial?: string;
-  nounForm?: string;
-  conditional?: string;
+  // Verb conjugations
+  v_masu?: string;
+  v_short_pres_pos?: string;
+  v_short_pres_neg?: string;
+  v_short_past_pos?: string;
+  v_short_past_neg?: string;
+  v_potential?: string;
+  v_volitional?: string;
+  v_passive?: string;
+  v_causative?: string;
+  // Adjective conjugations
+  a_te?: string;
+  a_nai?: string;
+  a_ta?: string;
+  a_pastNegative?: string;
+  a_adverbial?: string;
+  a_nounForm?: string;
+  a_conditional?: string;
 }
 
 export interface KanjiItem {

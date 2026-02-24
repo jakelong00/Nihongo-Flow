@@ -5,6 +5,7 @@ import { FolderX, Download, Settings as SettingsIcon, Info, ShieldCheck, Databas
 import { toCSV } from '../utils/csvHelper';
 import { STRINGS } from '../constants/strings';
 import { ShibaMascot } from '../components/ShibaMascot';
+import { ExcelToCSVTool } from '../components/ExcelToCSVTool';
 
 const Settings: React.FC = () => {
   const { resetDirectory, vocabData, kanjiData, grammarData, statsData } = useFileSystem();
@@ -57,6 +58,8 @@ const Settings: React.FC = () => {
                 </button>
             </div>
         </div>
+
+        <ExcelToCSVTool />
 
         <div className="bg-white p-8 rounded-[32px] shadow-sm border border-[#4A4E69]/5 space-y-6 flex flex-col">
             <h3 className="anime-title text-[9px] font-black text-[#FFB7C5] uppercase tracking-widest flex items-center gap-2">
