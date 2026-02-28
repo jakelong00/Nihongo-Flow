@@ -1,15 +1,29 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { Eraser, Undo2 } from 'lucide-react';
+
+export interface KanjiCanvasHandle {
+  clear: () => void;
+  getImageData: () => string | undefined;
+}
 
 interface KanjiCanvasProps {
   onClear?: () => void;
 }
 
-export const KanjiCanvas: React.FC<KanjiCanvasProps> = ({ onClear }) => {
+export const KanjiCanvas = forwardRef<KanjiCanvasHandle, KanjiCanvasProps>(({ onClear }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
+
+  useImperativeHandle(ref, () => ({
+    clear: () => {
+      clearCanvas();
+    },
+    getImageData: () => {
+      return canvasRef.current?.toDataURL('image/png');
+    }
+  }));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -208,4 +222,4 @@ export const KanjiCanvas: React.FC<KanjiCanvasProps> = ({ onClear }) => {
       </div>
     </div>
   );
-};
+});

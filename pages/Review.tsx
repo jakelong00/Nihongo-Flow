@@ -21,6 +21,7 @@ interface SessionLogEntry {
 }
 
 const VERB_FORM_MAP: Record<string, string> = {
+  v_te: 'Te-form',
   v_masu: 'Masu-form',
   v_short_pres_pos: 'Short Form (Pres. +)',
   v_short_pres_neg: 'Short Form (Pres. -)',
@@ -134,7 +135,7 @@ const Review: React.FC = () => {
     if (mode === 'conjugator') {
       pool = vocabData
         .filter(v => (v.partOfSpeech.toLowerCase().includes('verb') || v.partOfSpeech.toLowerCase().includes('adjective')))
-        .filter(v => !!(v.v_masu || v.v_short_pres_pos || v.v_short_pres_neg || v.v_short_past_pos || v.v_short_past_neg || v.v_potential || v.v_volitional || v.v_passive || v.v_causative || v.a_te || v.a_nai || v.a_ta || v.a_pastNegative || v.a_adverbial || v.a_nounForm || v.a_conditional))
+        .filter(v => !!(v.v_te || v.v_masu || v.v_short_pres_pos || v.v_short_pres_neg || v.v_short_past_pos || v.v_short_past_neg || v.v_potential || v.v_volitional || v.v_passive || v.v_causative || v.a_te || v.a_nai || v.a_ta || v.a_pastNegative || v.a_adverbial || v.a_nounForm || v.a_conditional))
         .map(i => ({ ...i, type: DataType.VOCAB }));
     } else if (mode === 'writing') {
       pool = kanjiData.map(i => ({ ...i, type: DataType.KANJI }));
@@ -599,7 +600,7 @@ const Review: React.FC = () => {
 
            {/* Canvas Side */}
            <div className="h-[320px] md:h-auto min-h-[320px] md:min-h-[380px]">
-              <KanjiCanvas />
+              <KanjiCanvas key={currentIndex} />
            </div>
         </div>
 

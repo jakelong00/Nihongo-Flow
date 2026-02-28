@@ -22,6 +22,7 @@ export interface VocabItem {
   chapter: string;
   source?: string;
   // Verb conjugations
+  v_te?: string;
   v_masu?: string;
   v_short_pres_pos?: string;
   v_short_pres_neg?: string;

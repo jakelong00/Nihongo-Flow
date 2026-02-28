@@ -13,6 +13,7 @@ const POS_OPTIONS = [
 ];
 
 const VERB_FORMS = [
+  { key: 'v_te', label: 'Te-form' },
   { key: 'v_masu', label: 'Masu-form' },
   { key: 'v_short_pres_pos', label: 'Short (Pres. +)' },
   { key: 'v_short_pres_neg', label: 'Short (Pres. -)' },
@@ -36,7 +37,7 @@ const ADJECTIVE_FORMS = [
 
 const EMPTY_FORM: Omit<VocabItem, 'id'> = {
   word: '', reading: '', meaning: '', partOfSpeech: 'Noun', jlpt: 'N5', chapter: '1', source: '',
-  v_masu: '', v_short_pres_pos: '', v_short_pres_neg: '', v_short_past_pos: '', v_short_past_neg: '', v_potential: '', v_volitional: '', v_passive: '', v_causative: '',
+  v_te: '', v_masu: '', v_short_pres_pos: '', v_short_pres_neg: '', v_short_past_pos: '', v_short_past_neg: '', v_potential: '', v_volitional: '', v_passive: '', v_causative: '',
   a_te: '', a_nai: '', a_ta: '', a_pastNegative: '', a_adverbial: '', a_nounForm: '', a_conditional: ''
 };
 

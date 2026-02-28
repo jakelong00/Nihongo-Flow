@@ -31,7 +31,7 @@ const FILE_NAMES = {
 
 const SAMPLE_VOCAB: VocabItem[] = [
   { id: '1', word: '猫', reading: 'ねこ', meaning: 'Cat', partOfSpeech: 'Noun', jlpt: 'N5', chapter: '1', source: 'Genki I' },
-  { id: '2', word: '食べる', reading: 'たべる', meaning: 'To eat', partOfSpeech: 'Ichidan Verb', jlpt: 'N5', chapter: '2', source: 'Genki I', v_masu: '食べます', v_short_pres_pos: '食べる', v_short_pres_neg: '食べない', v_short_past_pos: '食べた', v_short_past_neg: '食べなかった', v_potential: '食べられる', v_volitional: '食べよう', v_passive: '食べられる', v_causative: '食べさせる' },
+  { id: '2', word: '食べる', reading: 'たべる', meaning: 'To eat', partOfSpeech: 'Ichidan Verb', jlpt: 'N5', chapter: '2', source: 'Genki I', v_te: '食べて', v_masu: '食べます', v_short_pres_pos: '食べる', v_short_pres_neg: '食べない', v_short_past_pos: '食べた', v_short_past_neg: '食べなかった', v_potential: '食べられる', v_volitional: '食べよう', v_passive: '食べられる', v_causative: '食べさせる' },
   { id: '3', word: '速い', reading: 'はやい', meaning: 'Fast', partOfSpeech: 'I-Adjective', jlpt: 'N5', chapter: '3', source: 'Genki I', a_te: '速くて', a_nai: '速くない', a_ta: '速かった', a_pastNegative: '速くなかった', a_adverbial: '速く', a_conditional: '速ければ', a_nounForm: '速さ' }
 ];
 
